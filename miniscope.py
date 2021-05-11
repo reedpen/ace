@@ -7,6 +7,7 @@ Created on Mon Oct 19 08:43:50 2020
 
 import csv
 import os.path
+from json import load
 import experiment
 import numpy as np
 from scipy.signal import detrend
@@ -17,23 +18,19 @@ import misc_Functions
 
 class miniscope(experiment.experiment):
     """This is the class definition for handling miniscopes (1-photon calcium imaging) data."""
-    def __init__(self, filenameMiniscope='miniscope_settings_and_notes.dat', lineNum=None, filename='experiments.csv', analysisFilename='analysis_parameters.csv'):
+    def __init__(self, filenameMiniscope='metaData.json', lineNum=None, filename='experiments.csv', analysisFilename='analysis_parameters.csv'):
         if lineNum != None:
             super().__init__(lineNum, filename=filename)
         else:
             self.experiment = {}
         
-        # Import the DAT file 
+        # Import the meta data files and add to the experiment dictionary
         self.experiment['Miniscope settings filename'] = filenameMiniscope
-        self._miniscopeExperimentDAT = []
-        with open(filenameMiniscope, newline='') as s:
-            reader = csv.reader(s, delimiter='\t')
-            for row in reader:
-                self._miniscopeExperimentDAT.append(row)
-        
-        # Make a dictionary with each of the columns in the CSV file
-        for k, columnTitle in enumerate(self._miniscopeExperimentDAT[0]):
-            self.experiment[columnTitle] = self._miniscopeExperimentDAT[1][k]
+        with open(filenameMiniscope) as s:
+            self.experiment.update(load(s))
+        settingsFilename = os.path.split(filenameMiniscope)
+        with open(settingsFilename[0] + '/Miniscope/' + settingsFilename[1]) as s:
+            self.experiment.update(load(s))
         
         if 'directory' not in self.experiment:
             self.experiment['directory'] = os.path.abspath(os.path.dirname(filenameMiniscope))
@@ -77,7 +74,7 @@ class miniscope(experiment.experiment):
         """Import calcium imaging experiment events."""
         self.miniscopeEvents = {}
         # Make a dictionary with each of the columns in the DAT file
-        for k, columnTitle in enumerate(self._miniscopeExperimentDAT[3]):
+        for k, columnTitle in enumerate(self._miniscopeExperimentDAT[3]): # self._miniscopeExperimentDAT was previously imported in __init__, but the format of this file ('settings_and_notes.dat') changed.
             self.miniscopeEvents[columnTitle] = []
             for h in range(4, len(self._miniscopeExperimentDAT)):
                 self.miniscopeEvents[columnTitle].append(self._miniscopeExperimentDAT[h][k])
