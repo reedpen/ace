@@ -7,79 +7,82 @@ Created on Sun Feb  2 11:20:05 2025
 """
 import numpy as np
 import matplotlib.pyplot as plt
-from neo.io import NeuralynxIO
-from src2.shared.path_finder import PathFinder
-import os
-from src2.ephys.block_processor import BlockProcessor
+from abc import ABC, abstractmethod
 from src2.ephys.channel import Channel
 import logging
 from scipy.signal import hilbert
 
-class EphysDataManager():
+class EphysDataManager(ABC):
     """
-    Manages the import of raw ephys data (neo's high level object is called a "Block").
-    Processes raw ephys data via EphysBlockProcessor.
-    EphysBlockProcessor returns a dictionary of channels.
+    Abstract base class for ephys data managers.
+    Manages the import of raw ephys data and processes it into channels.
     Stores the processed channels in self.channels, where the key is the channel name and the value is a Channel object.
     """
 
+    _registry = []
 
-    def __init__(self, ephys_directory=None, auto_import_ephys_block=True, auto_process_block=True, auto_compute_phases=True, level = "CRITICAL"):
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if cls not in cls._registry:
+            cls._registry.append(cls)
+
+    @classmethod
+    def create(cls, ephys_directory, **kwargs):
+        """Factory method to create the appropriate subclasses for the directory."""
+        if ephys_directory is None:
+            raise ValueError("ephys_directory must be provided to create() factory.")
+            
+        for subclass in cls._registry:
+            if subclass.can_handle(ephys_directory):
+                return subclass(ephys_directory=ephys_directory, **kwargs)
+                
+        raise ValueError(f"No EphysDataManager subclass found that can handle directory: {ephys_directory}")
+
+    @classmethod
+    @abstractmethod
+    def can_handle(cls, directory) -> bool:
+        """Return True if this class can handle the format in the given directory."""
+        pass
+
+
+    def __init__(self, ephys_directory=None, auto_import_ephys_block=True, auto_process_block=True, auto_compute_phases=True, level="CRITICAL", channels=None, remove_artifacts=False):
         """Initialize the EphysDataManager and optionally load data.
         
         Args:
-            ephys_directory: Path to directory containing Neuralynx files.
+            ephys_directory: Path to directory containing ephys data.
             auto_import_ephys_block: If True, automatically import raw ephys data.
             auto_process_block: If True, automatically process block into channels.
             auto_compute_phases: If True, automatically compute phase for all channels.
             level: Logging level string.
+            channels: Channel names to process (optional).
+            remove_artifacts: If True, apply artifact removal during processing.
         """
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(level)
         
         self.channels = {}  # Processed channels
         self.ephys_block = None  # Raw data storage
 
-        if (auto_import_ephys_block):
+        if auto_import_ephys_block:
             assert ephys_directory is not None
             self.import_ephys_block(ephys_directory)
 
-        if (auto_process_block):
-            self.process_ephys_block_to_channels()
+        if auto_process_block:
+            self.process_ephys_block_to_channels(channels=channels, remove_artifacts=remove_artifacts)
             
         if auto_compute_phases:
             self.compute_phases_all_channels()
         
 
+    @abstractmethod
     def import_ephys_block(self, ephys_directory):
-        """Load raw Neuralynx data from disk into a Neo Block.
-        
-        Searches the directory for an Events.nev file and uses Neo's
-        NeuralynxIO to read all associated .ncs channel files.
-        
-        Args:
-            ephys_directory: Path to directory containing Neuralynx files.
-        """
-        print('Importing raw ephys data...')
-        ephys_file_path = self._find_ephys_file_path(ephys_directory) # get most recently edited Events.nev file
-        ephys_dir_path = os.path.dirname(ephys_file_path) # get its parent directory
-        file_reader = NeuralynxIO(dirname=ephys_dir_path)
-        self.ephys_block = file_reader.read_block(signal_group_mode='split-all')
+        """Load raw ephys data from disk."""
+        pass
 
-
-    def process_ephys_block_to_channels(self, channels, remove_artifacts=False):
-        """Process raw ephys block data into Channel objects.
-        
-        Uses BlockProcessor to extract signal data, events, and timing
-        from the loaded Neo Block.
-        
-        Args:
-            channels: Channel name or list of names to process.
-            remove_artifacts: If True, apply artifact removal.
-        """
-
-        processor = BlockProcessor(self.ephys_block, self.logger)
-        self.channels = processor.process_raw_ephys(channels, remove_artifacts=remove_artifacts)
+    @abstractmethod
+    def process_ephys_block_to_channels(self, channels=None, remove_artifacts=False):
+        """Process raw ephys data into Channel objects."""
+        pass
 
     def compute_phases_all_channels(self):
         """Compute instantaneous phase for all loaded channels."""
@@ -158,31 +161,6 @@ class EphysDataManager():
         """
         return self.channels[channel_name]
 
-
-
-
-
-
-
-
-
-
-    def _find_ephys_file_path(self, ephys_directory):
-        """Find the Events.nev file in the ephys directory.
-        
-        Args:
-            ephys_directory: Path to search for Neuralynx event files.
-            
-        Returns:
-            Path to the first matching Events.nev file.
-        """
-        path_finder = PathFinder()
-        events_path = path_finder.find( 
-                        directory=ephys_directory,
-                        suffix=".nev",
-                        prefix="Events"
-            )
-        return events_path[0]
     
     @staticmethod
     def _filter_data(data, n, cut, ftype, btype, fs, bodePlot=False):

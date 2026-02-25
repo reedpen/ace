@@ -122,15 +122,7 @@ class BlockProcessor:
         
         self._apply_hann_window(channel, mask, han_window, dt)
         
-            
 
-
-
-
-
-
-
-            
             
     def _process_single_channel(self, channel_name):
         """Process a single channel from raw segment data.

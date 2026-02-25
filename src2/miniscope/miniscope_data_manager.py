@@ -14,14 +14,14 @@ import numpy as np
 from src2.shared.path_finder import PathFinder
 from src2.shared.experiment_data_manager import ExperimentDataManager
 import src2.shared.file_downloader as file_downloader
+from abc import ABC, abstractmethod
 from src2.shared.paths import EXPERIMENTS
 from src2.shared.exceptions import DataImportError
 
-class MiniscopeDataManager(ExperimentDataManager):
+class MiniscopeDataManager(ExperimentDataManager, ABC):
     """Manages raw Miniscope data import and storage.
     
-    Extends ExperimentDataManager to handle calcium imaging data, including
-    movie loading, timestamp extraction, and metadata parsing.
+    Abstract Base Class for Miniscope data managers.
     
     Attributes:
         line_num: Experiment line number in experiments.csv.
@@ -33,6 +33,34 @@ class MiniscopeDataManager(ExperimentDataManager):
         fr: Frame rate from metadata.
     """
     
+    _registry = []
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if cls not in cls._registry:
+            cls._registry.append(cls)
+
+    @classmethod
+    def create(cls, line_num: int, **kwargs):
+        """Factory method to select the correct subclass for the directory."""
+        temp_edm = ExperimentDataManager(line_num, auto_import_metadata=True, auto_import_analysis_params=False)
+        directory = temp_edm.get_miniscope_directory()
+        
+        if directory is None:
+             raise ValueError(f"No miniscope directory set in metadata for line {line_num}")
+             
+        for subclass in cls._registry:
+            if subclass.can_handle(directory):
+                return subclass(line_num=line_num, **kwargs)
+                
+        raise ValueError(f"No MiniscopeDataManager subclass found that can handle directory: {directory}")
+
+    @classmethod
+    @abstractmethod
+    def can_handle(cls, directory) -> bool:
+        """Return True if this class can handle the format in the given directory."""
+        pass
+
     def __init__(self, line_num: int, filenames: list=[], auto_import_data=True):
         """Initialize data manager and optionally load movie data.
         
@@ -191,70 +219,13 @@ class MiniscopeDataManager(ExperimentDataManager):
                         n.close()
 
 
+    @abstractmethod
     def _get_miniscope_metadata(self) -> dict:
-        """
-        Imports miniscope metadata from a JSON file or multiple located at the paths returned by self._find_metadata_paths().
-        Converts the 'frameRate' value to a float (removing any 'FPS' suffix if necessary).
+        pass
 
-        Returns:
-            Dict: The metadata dictionary with a converted 'frameRate' value if present and converts any whole numbers to ints.
-        """
-        metadata_paths = self._find_metadata_paths()
-        if not isinstance(metadata_paths, list):
-            metadata_paths = [metadata_paths]
-        print(f"Reading metadata from {metadata_paths}...")
-        
-        if metadata_paths[0] is None:
-            print("No metadata paths found in your miniscope directory")
-            return None
-        
-        metadata = None
-        for metadata_path in metadata_paths:
-            try:
-                with open(metadata_path, 'r') as file:
-                    if not metadata:
-                        metadata = json.load(file)
-                    else:
-                        metadata = {**metadata, **json.load(file)}
-            except (IOError, json.JSONDecodeError) as e:
-                raise DataImportError(f"Error reading or parsing metadata file '{metadata_path}': {e}") from e
-    
-            # If 'frameRate' exists, try to convert it to a float
-            if 'frameRate' in metadata:
-                value = metadata['frameRate']
-                try:
-                    metadata['frameRate'] = float(value)
-                except ValueError:
-                    # Remove 'FPS' and any surrounding whitespace, then convert again
-                    cleaned_value = value.replace('FPS', '').strip()
-                    try:
-                        metadata['frameRate'] = float(cleaned_value)
-                    except ValueError:
-                        raise ValueError(f"Unable to convert frameRate value '{value}' to float.")
-        return metadata
-
-
+    @abstractmethod
     def _get_timestamps(self):
-        """Load frame timestamps and numbers from CSV file.
-        
-        Reads the timeStamps.csv file created by Miniscope software and
-        converts timestamps from milliseconds to seconds.
-        
-        Returns:
-            Tuple of (timestamps_array, frame_numbers_list).
-        """
-        file_path = self._find_timestamps_path()
-        time_stamps = []
-        frame_numbers = []
-        with open(file_path, newline='') as t:
-            next(t)
-            reader = csv.reader(t)
-            for row in reader:
-                frame_numbers.append(int(row[0]))
-                time_stamps.append(float(row[1]))
-        time_stamps = np.divide(np.asarray(time_stamps), 1000)  # convert from ms to s
-        return time_stamps, frame_numbers
-
+        pass
 
     def _get_movies(self, filenames=None):
         """Import calcium imaging data. Not necessary if using processCaMovies().
@@ -303,33 +274,9 @@ class MiniscopeDataManager(ExperimentDataManager):
         return matched_paths
 
 
+    @abstractmethod
     def _get_miniscope_events(self):
-        """Import calcium imaging experiment events."""
-        miniscope_events_filepaths = PathFinder.find(self.metadata['calcium imaging directory'], '.csv', 'notes')
-        
-        if miniscope_events_filepaths is not None and len(miniscope_events_filepaths) == 1:
-            miniscope_events_filepath = str(miniscope_events_filepaths[0])
-        else:
-            raise ValueError('Found zero or multiple event files')
-            
-        miniscope_events = {}
-        miniscope_events['timestamps'] = []
-        miniscope_events['labels'] = []
-        try:
-            with open(miniscope_events_filepath, newline='') as t:
-                next(t)
-                reader = csv.reader(t)
-                for row in reader:
-                    miniscope_events['timestamps'].append(int(row[0]))
-                    miniscope_events['labels'].append(row[1])
-            miniscope_events['timestamps'] = np.divide(np.asarray(miniscope_events['timestamps']), 1000)  # converts from ms to s
-        except (IOError, IndexError, ValueError, csv.Error) as e:
-            print(f"Failed to extract events from notes.csv ({e}). Storing an empty dictionary in miniscope_dm.miniscope_events...")
-        return miniscope_events
-            
-    
-
-
+        pass
 
     @property
     def _calcium_imaging_directory(self):
