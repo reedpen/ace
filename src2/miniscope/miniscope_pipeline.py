@@ -139,7 +139,7 @@ class MiniscopePipeline:
         params.pop('self', None)
         diag_logger.log_parameters(**params)
 
-        self.miniscope_data_manager = MiniscopeDataManager(line_num, filenames, auto_import_data=True)
+        self.miniscope_data_manager = MiniscopeDataManager.create(line_num=line_num, filenames=filenames, auto_import_data=True)
         self.miniscope_data_manager.diag_logger = diag_logger
         diag_logger.log_miniscope_metadata(self.miniscope_data_manager)
 

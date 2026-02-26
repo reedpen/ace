@@ -102,7 +102,7 @@ class EphysPipeline:
         file_downloader.verify_file_by_line(line_num=line_num, csv_path=EXPERIMENTS, do_type="ephys")
 
         # Create instance of EphysDataManager, process the block into channels
-        self.ephys_data_manager = EphysDataManager(ephys_directory, auto_import_ephys_block=True, auto_process_block=False, auto_compute_phases=False)
+        self.ephys_data_manager = EphysDataManager.create(ephys_directory=ephys_directory, auto_import_ephys_block=True, auto_process_block=False, auto_compute_phases=False)
         self.ephys_data_manager.diag_logger = diag_logger
         self.ephys_data_manager.process_ephys_block_to_channels(remove_artifacts=remove_artifacts, channels = channel_name)
 
