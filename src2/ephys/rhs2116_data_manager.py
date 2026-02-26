@@ -109,6 +109,9 @@ class RHS2116DataManager(EphysDataManager):
             stream_index=0
         )
 
+        # Calculate effective sampling rate so analysis features (like spectrograms) don't crash trying to allocate 250M samples/sec
+        effective_sampling_rate = float(1.0 / np.median(np.diff(time_vector))) if len(time_vector) > 1 else self.sampling_rate
+
         # Create Channel objects compatible with downstream processing
         for i in range(self.NUM_CHANNELS):
             channel_name = f"RHS2116_AC_{i}"
@@ -119,5 +122,5 @@ class RHS2116DataManager(EphysDataManager):
             signal = ac_data_float[:, i]
             events = {'labels': [], 'timestamps': []}
             
-            chan = Channel(channel_name, signal, self.sampling_rate, time_vector, events)
+            chan = Channel(channel_name, signal, effective_sampling_rate, time_vector, events)
             self.channels[channel_name] = chan

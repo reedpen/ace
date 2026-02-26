@@ -97,10 +97,15 @@ class DiagnosticLogger:
         
         # Try to get sampling rate from the specific channel or any available channel
         channel_to_check = None
-        if channel_name and channel_name in ephys_dm.channels:
-            channel_to_check = ephys_dm.channels[channel_name]
-        elif ephys_dm.channels:
-             channel_to_check = next(iter(ephys_dm.channels.values()))
+        if hasattr(ephys_dm, 'channels'):
+            if isinstance(ephys_dm.channels, dict):
+                if channel_name and channel_name in ephys_dm.channels:
+                    channel_to_check = ephys_dm.channels[channel_name]
+                elif ephys_dm.channels:
+                     channel_to_check = next(iter(ephys_dm.channels.values()))
+            elif isinstance(ephys_dm.channels, list) and len(ephys_dm.channels) > 0:
+                # Fallback if channels is just a flat list
+                channel_to_check = ephys_dm.channels[0]
              
         if channel_to_check:
             ephys_data["sampling_rate"] = getattr(channel_to_check, 'sampling_rate', None)
@@ -180,6 +185,8 @@ class DiagnosticLogger:
         if self.log_data["execution_info"]["status"] == "Running":
              self.log_data["execution_info"]["status"] = "Success"
              
+        # Append diagnostic_logs to the provided output directory path
+        output_dir = os.path.join(output_dir, "diagnostic_logs")
         os.makedirs(output_dir, exist_ok=True)
         
         safe_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")

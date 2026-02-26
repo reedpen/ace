@@ -1,6 +1,8 @@
 from src2.shared.diagnostic_logger import DiagnosticLogger
 from src2.shared.misc_functions import update_csv_cell
 from src2.miniscope.miniscope_data_manager import MiniscopeDataManager
+from src2.miniscope.ucla_v4_miniscope_data_manager import UCLAV4MiniscopeDataManager
+from src2.miniscope.v3_miniscope_data_manager import V3MiniscopeDataManager
 from src2.miniscope.miniscope_preprocessor import MiniscopePreprocessor
 from src2.miniscope.miniscope_processor import MiniscopeProcessor
 from src2.miniscope.miniscope_postprocessor import MiniscopePostprocessor
@@ -137,6 +139,7 @@ class MiniscopePipeline:
         diag_logger = DiagnosticLogger(pipeline_name="miniscope", line_num=line_num)
         params = locals().copy()
         params.pop('self', None)
+        params.pop('diag_logger', None)
         diag_logger.log_parameters(**params)
 
         self.miniscope_data_manager = MiniscopeDataManager.create(line_num=line_num, filenames=filenames, auto_import_data=True)
@@ -191,8 +194,8 @@ class MiniscopePipeline:
                                                                                        freq_lims, time_bandwidth)
 
         try:
-            if hasattr(self, 'miniscope_data_manager') and hasattr(self.miniscope_data_manager, 'directory'):
-                diag_logger.save_log(self.miniscope_data_manager.directory)
+            from src2.shared.paths import PROJECT_REPO
+            diag_logger.save_log(PROJECT_REPO)
         except Exception as e:
             print(f"Failed to save diagnostic log: {e}")
 

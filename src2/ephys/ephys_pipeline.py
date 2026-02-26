@@ -9,6 +9,8 @@ Created on Sun Feb  2 11:20:05 2025
 from src2.shared.diagnostic_logger import DiagnosticLogger
 from src2.ephys.channel_worker import ChannelWorker
 from src2.ephys.ephys_data_manager import EphysDataManager
+from src2.ephys.rhs2116_data_manager import RHS2116DataManager
+from src2.ephys.neuralynx_data_manager import NeuralynxDataManager
 from src2.ephys.visualizer import Visualizer
 from src2.shared.experiment_data_manager import ExperimentDataManager
 from typing import List
@@ -84,6 +86,7 @@ class EphysPipeline:
         diag_logger = DiagnosticLogger(pipeline_name="ephys", line_num=line_num)
         params = locals().copy()
         params.pop('self', None)
+        params.pop('diag_logger', None)
         diag_logger.log_parameters(**params)
 
         logger = logging.getLogger(__name__)
@@ -104,7 +107,7 @@ class EphysPipeline:
         # Create instance of EphysDataManager, process the block into channels
         self.ephys_data_manager = EphysDataManager.create(ephys_directory=ephys_directory, auto_import_ephys_block=True, auto_process_block=False, auto_compute_phases=False)
         self.ephys_data_manager.diag_logger = diag_logger
-        self.ephys_data_manager.process_ephys_block_to_channels(remove_artifacts=remove_artifacts, channels = channel_name)
+        self.ephys_data_manager.process_ephys_block_to_channels(remove_artifacts=remove_artifacts, channels=[channel_name])
 
         diag_logger.log_ephys_metadata(self.ephys_data_manager, channel_name=channel_name)
 
@@ -141,8 +144,8 @@ class EphysPipeline:
             if hasattr(self.ephys_data_manager, 'diag_logger') and self.ephys_data_manager.diag_logger is not None: self.ephys_data_manager.diag_logger.resume_timer()
             
         try:
-            if hasattr(self, 'ephys_data_manager') and hasattr(self.ephys_data_manager, 'directory'):
-                diag_logger.save_log(self.ephys_data_manager.directory)
+            from src2.shared.paths import PROJECT_REPO
+            diag_logger.save_log(PROJECT_REPO)
         except Exception as e:
             print(f"Failed to save diagnostic log: {e}")
             
@@ -175,6 +178,7 @@ class EphysPipeline:
         diag_logger = DiagnosticLogger(pipeline_name="ephys_all_channels", line_num=line_num)
         params = locals().copy()
         params.pop('self', None)
+        params.pop('diag_logger', None)
         diag_logger.log_parameters(**params)
 
         logger = logging.getLogger(__name__)
@@ -190,7 +194,8 @@ class EphysPipeline:
         
         ephys_directory = experiment_data_manager.get_ephys_directory()
         try:
-            diag_logger.save_log(ephys_directory)
+            from src2.shared.paths import PROJECT_REPO
+            diag_logger.save_log(PROJECT_REPO)
         except Exception as e:
             print(f"Failed to save diagnostic log: {e}")
 
