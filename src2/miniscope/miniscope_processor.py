@@ -175,18 +175,23 @@ class MiniscopeProcessor:
             #calculate min correlation/min pnr and plot them
             gsig_tmp = (3,3)
             correlation_image, peak_to_noise_ratio = cm.summary_images.correlation_pnr(images[::max(T//1000, 1)], gSig=gsig_tmp[0], swap_dim=False)
+            if hasattr(dm, 'diag_logger') and dm.diag_logger is not None: dm.diag_logger.pause_timer()
             cm.utils.visualization.inspect_correlation_pnr(correlation_image, peak_to_noise_ratio)
             plt.show(block=True)
+            if hasattr(dm, 'diag_logger') and dm.diag_logger is not None: dm.diag_logger.resume_timer()
             
             #Calculate stride/overlap and plot them
             cnmfe_patch_width = dm.opts_caiman.get('patch', 'rf') * 2 + 1
             cnmfe_patch_overlap = dm.opts_caiman.get('patch', 'stride') + 1
             cnmfe_patch_stride = cnmfe_patch_width - cnmfe_patch_overlap
             print(f'Patch width: {cnmfe_patch_width} , Stride: {cnmfe_patch_stride}, Overlap: {cnmfe_patch_overlap}')
+            
+            if hasattr(dm, 'diag_logger') and dm.diag_logger is not None: dm.diag_logger.pause_timer()
             patch_ax = cm.utils.visualization.view_quilt(correlation_image, cnmfe_patch_stride, cnmfe_patch_overlap, vmin=np.percentile(np.ravel(correlation_image), 50), 
                                                          vmax=np.percentile(np.ravel(correlation_image), 99.5), color='yellow', figsize=(4,4))
             patch_ax.set_title(f'CNMFE Patch Width {cnmfe_patch_width}, Overlap {cnmfe_patch_overlap}')
             plt.show(block=True)
+            if hasattr(dm, 'diag_logger') and dm.diag_logger is not None: dm.diag_logger.resume_timer()
             
             #REMEMBER! Change analysis_parameter.csv so that these paramters are optimal BEFORE running CNMFE, then skip this step when they are optimal
         return dm, images
@@ -258,7 +263,9 @@ class MiniscopeProcessor:
                 m1 = np.clip(m1 * 3, 0, 1)  # Adjust multiplier (e.g., 1.2 to 2.0) as needed
             
                 # Concatenate and play
+                if hasattr(self.data_manager, 'diag_logger') and self.data_manager.diag_logger is not None: self.data_manager.diag_logger.pause_timer()
                 cm.concatenate([m1, m2], axis=2).play(fr=15, gain=1.0, magnification=2)
+                if hasattr(self.data_manager, 'diag_logger') and self.data_manager.diag_logger is not None: self.data_manager.diag_logger.resume_timer()
                 
             if plot_correlation:
                 h, ax = misc_functions._prep_axes(xLabel=['', 'Frames'], yLabel=['', 'Pixels'], subPlots=[1, 2])
