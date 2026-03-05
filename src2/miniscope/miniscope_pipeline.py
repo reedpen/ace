@@ -1,4 +1,4 @@
-from src2.shared.diagnostic_logger import DiagnosticLogger
+
 from src2.shared.misc_functions import update_csv_cell
 from src2.miniscope.miniscope_data_manager import MiniscopeDataManager
 from src2.miniscope.ucla_v4_miniscope_data_manager import UCLAV4MiniscopeDataManager
@@ -136,15 +136,10 @@ class MiniscopePipeline:
             inline = False
             print("Running in HEADLESS mode. GUI steps disabled.", flush=True)
 
-        diag_logger = DiagnosticLogger(pipeline_name="miniscope", line_num=line_num)
         params = locals().copy()
         params.pop('self', None)
-        params.pop('diag_logger', None)
-        diag_logger.log_parameters(**params)
 
         self.miniscope_data_manager = MiniscopeDataManager.create(line_num=line_num, filenames=filenames, auto_import_data=True)
-        self.miniscope_data_manager.diag_logger = diag_logger
-        diag_logger.log_miniscope_metadata(self.miniscope_data_manager)
 
         
         
@@ -156,9 +151,7 @@ class MiniscopePipeline:
             }
             crop_job_name = '_crop'
         else:
-            if hasattr(self.miniscope_data_manager, 'diag_logger') and self.miniscope_data_manager.diag_logger is not None: self.miniscope_data_manager.diag_logger.pause_timer()
             coords_dict, crop_job_name = get_coords_dict_from_analysis_params(self.miniscope_data_manager)
-            if hasattr(self.miniscope_data_manager, 'diag_logger') and self.miniscope_data_manager.diag_logger is not None: self.miniscope_data_manager.diag_logger.resume_timer()
         
         self.preprocessor = MiniscopePreprocessor(self.miniscope_data_manager)
         self.miniscope_data_manager = self.preprocessor.preprocess_calcium_movie(coords_dict, crop=crop, detrend_method=detrend_method, df_over_f=df_over_f, 
@@ -193,15 +186,7 @@ class MiniscopePipeline:
                                                                                        btype, inline, compute_miniscope_spectrogram, window_length, window_step, 
                                                                                        freq_lims, time_bandwidth)
 
-        try:
-            from src2.shared.paths import PROJECT_REPO
-            diag_logger.save_log(PROJECT_REPO)
-        except Exception as e:
-            print(f"Failed to save diagnostic log: {e}")
-
-
-
-
+        
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Run Miniscope Analysis Pipeline",

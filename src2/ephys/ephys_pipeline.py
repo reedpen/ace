@@ -6,7 +6,6 @@ Created on Sun Feb  2 11:20:05 2025
 @author: lukerichards
 """
 
-from src2.shared.diagnostic_logger import DiagnosticLogger
 from src2.ephys.channel_worker import ChannelWorker
 from src2.ephys.ephys_data_manager import EphysDataManager
 from src2.ephys.rhs2116_data_manager import RHS2116DataManager
@@ -83,11 +82,6 @@ class EphysPipeline:
             tkinter._default_root.destroy()
             matplotlib.use('Qt5Agg')
 
-        diag_logger = DiagnosticLogger(pipeline_name="ephys", line_num=line_num)
-        params = locals().copy()
-        params.pop('self', None)
-        params.pop('diag_logger', None)
-        diag_logger.log_parameters(**params)
 
         logger = logging.getLogger(__name__)
         logger.setLevel(logging_level)
@@ -106,10 +100,7 @@ class EphysPipeline:
 
         # Create instance of EphysDataManager, process the block into channels
         self.ephys_data_manager = EphysDataManager.create(ephys_directory=ephys_directory, auto_import_ephys_block=True, auto_process_block=False, auto_compute_phases=False)
-        self.ephys_data_manager.diag_logger = diag_logger
         self.ephys_data_manager.process_ephys_block_to_channels(remove_artifacts=remove_artifacts, channels=[channel_name])
-
-        diag_logger.log_ephys_metadata(self.ephys_data_manager, channel_name=channel_name)
 
         logger.debug(self.ephys_data_manager.channels)
 
@@ -129,26 +120,15 @@ class EphysPipeline:
         
 
         if plot_channel:
-            if hasattr(self.ephys_data_manager, 'diag_logger') and self.ephys_data_manager.diag_logger is not None: self.ephys_data_manager.diag_logger.pause_timer()
             channel_worker.plot_channel(use_filtered = filter_bool)
-            if hasattr(self.ephys_data_manager, 'diag_logger') and self.ephys_data_manager.diag_logger is not None: self.ephys_data_manager.diag_logger.resume_timer()
 
         if plot_spectrogram:
-            if hasattr(self.ephys_data_manager, 'diag_logger') and self.ephys_data_manager.diag_logger is not None: self.ephys_data_manager.diag_logger.pause_timer()
             channel_worker.plot_spectrogram(use_filtered = filter_bool, plot_events=False)  
-            if hasattr(self.ephys_data_manager, 'diag_logger') and self.ephys_data_manager.diag_logger is not None: self.ephys_data_manager.diag_logger.resume_timer()
             
         if plot_phases:
-            if hasattr(self.ephys_data_manager, 'diag_logger') and self.ephys_data_manager.diag_logger is not None: self.ephys_data_manager.diag_logger.pause_timer()
             channel_worker.plot_phases()
-            if hasattr(self.ephys_data_manager, 'diag_logger') and self.ephys_data_manager.diag_logger is not None: self.ephys_data_manager.diag_logger.resume_timer()
             
-        try:
-            from src2.shared.paths import PROJECT_REPO
-            diag_logger.save_log(PROJECT_REPO)
-        except Exception as e:
-            print(f"Failed to save diagnostic log: {e}")
-            
+
 
     def run_all_channels(
             self, 
@@ -175,11 +155,6 @@ class EphysPipeline:
             logging_level: Logging verbosity.
         """
         
-        diag_logger = DiagnosticLogger(pipeline_name="ephys_all_channels", line_num=line_num)
-        params = locals().copy()
-        params.pop('self', None)
-        params.pop('diag_logger', None)
-        diag_logger.log_parameters(**params)
 
         logger = logging.getLogger(__name__)
         logger.setLevel(logging_level)
@@ -193,11 +168,7 @@ class EphysPipeline:
         channels_list: List = [*channels_str] # unpack
         
         ephys_directory = experiment_data_manager.get_ephys_directory()
-        try:
-            from src2.shared.paths import PROJECT_REPO
-            diag_logger.save_log(PROJECT_REPO)
-        except Exception as e:
-            print(f"Failed to save diagnostic log: {e}")
+
 
 
 

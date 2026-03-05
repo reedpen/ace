@@ -110,7 +110,12 @@ class RHS2116DataManager(EphysDataManager):
         )
 
         # Calculate effective sampling rate so analysis features (like spectrograms) don't crash trying to allocate 250M samples/sec
-        effective_sampling_rate = float(1.0 / np.median(np.diff(time_vector))) if len(time_vector) > 1 else self.sampling_rate
+        # During verification, `time_vector` can be massive, stalling `np.diff`. calculating on the first thousands elements is sufficient
+        subset_size = min(10000, len(time_vector))
+        effective_sampling_rate = float(1.0 / np.median(np.diff(time_vector[:subset_size]))) if subset_size > 1 else self.sampling_rate
+
+        # Trim the time vector down to the loaded signal chunk size
+        time_vector = time_vector[:ac_data_float.shape[0]]
 
         # Create Channel objects compatible with downstream processing
         for i in range(self.NUM_CHANNELS):

@@ -1,5 +1,5 @@
 import numpy as np
-import FreeSimpleGUI as sg
+import PySimpleGUI as sg
 import matplotlib.pyplot as plt
 import caiman as cm
 import io
