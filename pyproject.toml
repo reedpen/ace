@@ -1,3 +1,129 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=68.0", "setuptools-scm>=8.0"]
 build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "ace-neuro"
+version = "0.1.0"
+description = "Analysis of Calcium Imaging and Ephys — integrated pipelines for miniscope calcium imaging and electrophysiology data."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+    { name = "Reed Pennock" },
+]
+keywords = [
+    "neuroscience",
+    "calcium-imaging",
+    "electrophysiology",
+    "miniscope",
+    "cnmfe",
+    "signal-processing",
+    "data-analysis",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Typing :: Typed",
+]
+dependencies = [
+    "numpy>=1.23",
+    "scipy>=1.9",
+    "matplotlib>=3.5",
+    "pandas>=1.5",
+    "opencv-python>=4.6",
+    "tqdm>=4.64",
+    "h5py>=3.7",
+    "colorcet>=3.0",
+    "neo>=0.12",
+    "quantities>=0.14",
+    "joblib>=1.2",
+    "caiman>=1.11",
+    "PySimpleGUI>=4.60",
+    "Pillow>=9.0",
+]
+
+[project.optional-dependencies]
+box = [
+    "box-sdk-gen>=1.0",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.4",
+    "mypy>=1.8",
+]
+docs = [
+    "mkdocs-material>=9.0",
+    "mkdocstrings[python]>=0.24",
+    "pymdown-extensions>=10.0",
+]
+all = [
+    "ace-neuro[box]",
+]
+
+[project.urls]
+Homepage = "https://github.com/emelon8/experiment_analysis"
+Documentation = "https://emelon8.github.io/experiment_analysis/"
+Repository = "https://github.com/emelon8/experiment_analysis"
+"Bug Tracker" = "https://github.com/emelon8/experiment_analysis/issues"
+
+
+# ---------------------------------------------------------------------------
+# Setuptools
+# ---------------------------------------------------------------------------
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+ace_neuro = ["py.typed"]
+
+
+# ---------------------------------------------------------------------------
+# Pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-v --tb=short"
+
+
+# ---------------------------------------------------------------------------
+# Ruff (linter + formatter)
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "E741",  # ambiguous variable name
+]
+
+
+# ---------------------------------------------------------------------------
+# Mypy (type checking)
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true

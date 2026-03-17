@@ -1,14 +1,30 @@
-.DS_Store
-*.egg-info/
+# Byte-compiled / Optimized
 *.pyc
-.env
+__pycache__/
+
+# Distribution / Packaging
+*.egg-info/
+dist/
+build/
+
+# Tool caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Project-specific
 experiments.csv
 analysis_parameters.csv
 /data/downloaded_data/
-box_credentials.py
-src2/shared/box_credentials.py
-.agent/
 /data/data_types/
+box_credentials.py
+src/ace_neuro/shared/box_credentials.py
+
+# Generated docs (built by MkDocs)
 /docs/
-# macOS
+
+# IDE / OS
 .DS_Store
+.agent/
+.vscode/
+.idea/

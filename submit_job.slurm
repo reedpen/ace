@@ -44,4 +44,6 @@ echo $TMPDIR
 
 # python --version # This can help confirm that the previous command has been run, because otherwise the command below will start Python 2.
 
-python ~/data_analysis_code/experiment_analysis/process_entire_miniscope_recording.py $SLURM_JOBID
+# Run the miniscope pipeline (example using line 96 from experiments.csv)
+python -m ace_neuro.pipelines.miniscope --line-num 96 --project-path ~/data_analysis_code/experiment_analysis --headless
+

@@ -1,4 +1,4 @@
-# Experiment-Analysis
+# ACE-neuro: Analysis of Calcium Imaging and Ephys
 
 **A comprehensive, open-source data analysis pipeline for systems neuroscience.**
 
@@ -13,7 +13,8 @@ This software facilitates the processing, analysis, and visualization of simulta
     *   Event Detection: Robust inference of calcium events from temporal traces.
 *   **Electrophysiology Analysis:** Tools for importing and cleaning Neuralynx data, including artifact removal, filtering, phase computation, and spectral analysis.
 *   **Multimodal Integration:** Seamless alignment of independent Miniscope and Ephys timestamps, enabling cross-modal analysis such as phase-locking of calcium events to channel-specific oscillations.
-*   **Data Management:** Integrated utilities for managing large experiment cohorts and automated cloud storage (Box) interaction.
+*   **Data Management:** Integrated utilities for managing large experiment cohorts with explicit path management and automated cloud storage (Box) interaction.
+*   **Modern Infrastructure:** 100% type-hinted codebase, automated documentation site, and CI/CD testing framework.
 
 ## System Architecture
 
@@ -23,6 +24,8 @@ The project is built on a robust object-oriented framework designed for scalabil
 classDiagram
     class ExperimentDataManager {
         +int line_num
+        +Path project_path
+        +Path data_path
         +dict metadata
         +dict analysis_params
         +import_metadata()
@@ -86,100 +89,80 @@ classDiagram
 *   **`MiniscopeProcessor`**: Orchestrates the calcium imaging workflow, wrapping `CaImAn` functionality with optimized defaults and parallel processing management.
 *   **`BlockProcessor`**: Handles signal conditioning and artifact removal for electrophysiological data.
 
-## Getting Started
+## Installation
 
-### Prerequisites
-*   **Python 3.10+**
-*   **Miniforge3/Mamba** (Recommended for managing conflicting dependencies like `liblapack` and `CaImAn`)
-
-### Installation
-
-1.  **Clone the Repository:**
-    ```bash
-    git clone https://github.com/emelon8/experiment_analysis.git
-    cd experiment_analysis
-    ```
-
-2.  **Create Environment:**
-
-    **macOS:**
-    ```bash
-    mamba env create -f environment.yml
-    ```
-
-    **Windows:**
-    ```bash
-    mamba env create -f windows.yml
-    ```
-
-    **Linux:**
-    ```bash
-    mamba env create -f linux_environment.yml
-    ```
-
-    > **Note:** If you encounter dependency conflicts (e.g., with `liblapack`), we strongly recommend using `mamba` instead of `conda` for the environment creation step.
-
-    Activate the environment:
-    ```bash
-    conda activate caiman
-    ```
-
-3.  **Install the Package:**
-    ```bash
-    pip install -e .
-    ```
+1. **Prerequisites**: Python 3.10+, Mamba/Conda.
+2. **Clone & Install**:
+   ```bash
+   git clone https://github.com/emelon8/experiment_analysis.git
+   cd experiment_analysis
+   mamba env create -f linux_environment.yml && conda activate caiman
+   pip install -e .
+   ```
+3. **Configure Paths**: Use `--project-path` CLI arguments or pass paths to `Pipeline.run()` (see below).
 
 ### Project Setup
 
-Each research project has its own directory containing experiment configuration files. See this [example project](https://github.com/reedpen/example-project) for a template.
+The pipeline requires explicit paths — no hidden environment variables or config files:
 
-1. **Create a project directory** with:
-   - `experiments.csv` — Experiment metadata (paths, IDs, etc.)
-   - `analysis_parameters.csv` — Pipeline parameters per experiment
-   - `run_analysis.py` — Optional batch processing script
+1.  **CLI Arguments**: Use `--project-path` and `--data-path` when running scripts.
+2.  **Programmatic API**: Pass paths directly to the `Pipeline.run()` method.
 
-2. **Configure your `.env` file** (copy from `.env.example`):
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` to point to your project:
-   ```
-   PROJECT_REPO=/path/to/your/project
-   BASE_FILE_PATH=/path/to/raw/data  # Optional, defaults to PROJECT_REPO/data/downloaded_data
-   ```
+```python
+from ace_neuro.pipelines.ephys import EphysPipeline
 
-3. **Cloud storage** (optional): For automated downloading from Box, configure `src2/shared/box_credentials.py` (see `src2/shared/BLANK_box_credentials.py`).
+api = EphysPipeline()
+api.run(line_num=96, project_path="/path/to/project")
+```
+
+For more details on directory structure and cloud integration, see the **[Getting Started Guide](GETTING_STARTED.md)**.
 
 ## Usage
 
 The project uses modular pipeline scripts as the primary entry points. Each pipeline loads parameters from your project's `analysis_parameters.csv` based on the experiment's line number.
 
 ### 1. Miniscope Analysis
-**Script:** `src2/miniscope/miniscope_pipeline.py`
+**Script:** `ace_neuro/miniscope/miniscope_pipeline.py`
 
 ```bash
 # Run analysis for experiment line 96
-python -m src2.miniscope.miniscope_pipeline --line-num 96
+python -m ace_neuro.pipelines.miniscope --line-num 96
 
 # Run in headless mode (e.g., for HPC/Slurm jobs)
-python -m src2.miniscope.miniscope_pipeline --line-num 96 --headless
+python -m ace_neuro.pipelines.miniscope --line-num 96 --headless
 ```
 
 ### 2. Electrophysiology Analysis
-**Script:** `src2/ephys/ephys_pipeline.py`
+**Script:** `ace_neuro/ephys/ephys_pipeline.py`
 
 ```bash
-python -m src2.ephys.ephys_pipeline --line-num 96
+python -m ace_neuro.pipelines.ephys --line-num 96
 ```
 
 ### 3. Multimodal Analysis
-**Script:** `src2/multimodal/multimodal_pipeline.py`
+**Script:** `ace_neuro/multimodal/multimodal_pipeline.py`
 
 ```bash
-python -m src2.multimodal.multimodal_pipeline --line-num 97
+python -m ace_neuro.pipelines.multimodal --line-num 97
 ```
 
-For detailed documentation, see the module-specific READMEs in `src2/miniscope/README.md`, `src2/ephys/README.md`, and `src2/multimodal/README.md`.
+For detailed documentation, see the module-specific READMEs in `ace_neuro/miniscope/README.md`, `ace_neuro/ephys/README.md`, and `ace_neuro/multimodal/README.md`.
+
+## Documentation
+
+A comprehensive documentation site, including full API references and guides, is available at:
+**[Link to your GitHub Pages site - e.g., https://emelon8.github.io/experiment_analysis/]**
+
+To view the documentation locally:
+```bash
+pip install mkdocs-material mkdocstrings-python
+mkdocs serve
+```
+
+## Examples
+
+Check the `examples/` directory for demonstration scripts:
+*   **[explicit_paths_demo.py](examples/explicit_paths_demo.py)**: Shows how to run pipelines using the explicit path API.
 
 ## License
 

@@ -1,0 +1,88 @@
+site_name: ACE-neuro
+site_description: Analysis of Calcium Imaging and Ephys — integrated pipelines for miniscope calcium imaging and electrophysiology data.
+site_url: https://emelon8.github.io/experiment_analysis/
+site_author: "Reed Bjork"
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep-purple
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep-purple
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    logo: material/flask-outline   # A science flask icon
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.expand
+    - navigation.path
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - mdx_math:
+      enable_dollar_delimiter: True
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+
+nav:
+  - Home: index.md
+  - Getting Started: getting_started.md
+  - Examples: examples.md
+  - Tutorials:
+      - Miniscope Processing: notebooks/miniscope_pipeline_tutorial.ipynb
+      - Ephys Processing: notebooks/ephys_pipeline_tutorial.ipynb
+      - Multimodal Alignment: notebooks/multimodal_alignment_tutorial.ipynb
+  - User Guides:
+      - Miniscope Analysis: guides/miniscope.md
+      - Ephys Analysis: guides/ephys.md
+      - Multimodal Integration: guides/multimodal.md
+      - Data Management: guides/data_management.md
+  - API Reference:
+      - Pipelines: api/pipelines.md
+      - Miniscope Components: api/miniscope.md
+      - Ephys Components: api/ephys.md
+      - Shared Utils: api/shared.md
+  - Community:
+      - Contributing: contributing.md
+      - Code of Conduct: code_of_conduct.md
+      - Changelog: changelog.md
