@@ -85,7 +85,7 @@ Repository = "https://github.com/emelon8/experiment_analysis"
 where = ["src"]
 
 [tool.setuptools.package-data]
-ace_neuro = ["py.typed"]
+ace_neuro = ["py.typed", "shared/metadata_templates/*.csv"]
 
 
 # ---------------------------------------------------------------------------

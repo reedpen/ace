@@ -31,7 +31,7 @@ class TestExperimentDataManager:
             auto_import_metadata=False, auto_import_analysis_params=False
         )
         
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Did you forget to initialize your project data folder"):
             manager.import_metadata()
 
     @patch("ace_neuro.shared.experiment_data_manager.CSVWorker")

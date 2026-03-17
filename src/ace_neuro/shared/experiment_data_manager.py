@@ -86,7 +86,9 @@ class ExperimentDataManager:
         if not experiments_csv.exists():
             raise FileNotFoundError(
                 f"Experiments file not found: {experiments_csv}\n"
-                f"Make sure project_path is correct (currently: {self.project_path})"
+                f"Did you forget to initialize your project data folder?\n"
+                f"Please copy the `experiments_template.csv` from `ace_neuro.shared.metadata_templates` "
+                f"into your project directory. See docs/guides/data_management.md for details."
             )
         
         metadata_unconverted = CSVWorker.csv_row_to_dict(experiments_csv, self.line_num)
@@ -112,9 +114,11 @@ class ExperimentDataManager:
         analysis_params_csv = self.project_path / "analysis_parameters.csv"
         
         if not analysis_params_csv.exists():
-            self.logger.info(
-                f"No analysis_parameters.csv found at {analysis_params_csv}. "
-                f"Using pipeline defaults."
+            self.logger.warning(
+                f"No analysis_parameters.csv found at {analysis_params_csv}.\n"
+                f"For full reproducible control, copy the `analysis_parameters_template.csv` "
+                f"from `ace_neuro.shared.metadata_templates` into your project directory.\n"
+                f"Falling back to built-in pipeline defaults..."
             )
             self.analysis_params = {}
             return
