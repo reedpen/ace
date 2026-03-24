@@ -3,8 +3,9 @@ import matplotlib.pyplot as plt
 from abc import ABC, abstractmethod
 from ace_neuro.ephys.channel import Channel
 import logging
-from scipy.signal import hilbert
-from typing import List, Optional, Union, Dict, Any, Type, TypeVar
+from scipy.signal import hilbert  # type: ignore
+from typing import List, Optional, Union, Dict, Any, Type, TypeVar, cast
+from pathlib import Path
 
 T = TypeVar("T", bound="EphysDataManager")
 
@@ -33,7 +34,7 @@ class EphysDataManager(ABC):
             
         for subclass in cls._registry:
             if subclass.can_handle(ephys_directory):
-                return subclass(ephys_directory=ephys_directory, **kwargs)  # type: ignore
+                return cast(T, subclass(ephys_directory=ephys_directory, **kwargs))
                 
         raise ValueError(f"No EphysDataManager subclass found that can handle directory: {ephys_directory}")
 
@@ -46,7 +47,7 @@ class EphysDataManager(ABC):
 
     def __init__(
         self, 
-        ephys_directory: Optional[Union[str, Path]] = None, 
+        ephys_directory: Optional[Union[str, Path]] = None,
         auto_import_ephys_block: bool = True, 
         auto_process_block: bool = True, 
         auto_compute_phases: bool = True, 
@@ -210,7 +211,7 @@ class EphysDataManager(ABC):
         Returns:
             Filtered signal as 1D numpy array.
         """
-        from scipy.signal import butter, freqz, filtfilt, firwin, bode
+        from scipy.signal import butter, freqz, filtfilt, firwin, bode  # type: ignore
         import logging
 
         # Set up logging
@@ -265,6 +266,8 @@ class EphysDataManager(ABC):
                 plt.semilogx(w,mag)
                 plt.figure()
                 plt.semilogx(w,phase)
+        else:
+            raise ValueError(f"Unknown filter type: {ftype}")
 
         return filteredData
         

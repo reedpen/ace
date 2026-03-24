@@ -100,7 +100,7 @@ def spectrogram(
     
     cBarMin = np.percentile(specData, cBarPercentLims[0])
     cBarMax = np.percentile(specData, cBarPercentLims[1])
-    spectrogramPlot = ax.imshow(specData, interpolation='none', extent=[tVec[0], tVec[-1], freqVec[0], freqVec[-1]],
+    spectrogramPlot = ax.imshow(specData, interpolation='none', extent=(tVec[0], tVec[-1], freqVec[0], freqVec[-1]),
                                 aspect='auto', vmin=cBarMin, vmax=cBarMax, origin='lower')
     cbar = h.colorbar(spectrogramPlot, ax=ax)
     cbar.set_label(cLabel)
@@ -124,12 +124,12 @@ def mark_events(axisHandle: plt.Axes, eventTimes: Union[float, List[float], np.n
     else:
         eventPoints = eventTimes
         
-    axisHandle.eventplot(eventPoints, lineoffsets=lineOffset, linelengths=lineLength, colors='k')
-    axisHandle.axis([xLimits[0], xLimits[1], yLimits[0], yLimits[1]])
+    axisHandle.eventplot(eventPoints, lineoffsets=float(lineOffset), linelengths=float(lineLength), colors='k')
+    axisHandle.axis((xLimits[0], xLimits[1], yLimits[0], yLimits[1]))
 
 
 def _find_file_paths(
-    directory: Union[str, Path] = None, 
+    directory: Optional[Union[str, Path]] = None,
     fileExtensions: Optional[Union[str, List[str], Tuple[str, ...]]] = None, 
     fileStartsWith: Optional[Union[str, List[str], Tuple[str, ...]]] = None,
     removeFile: bool = False, 
@@ -413,7 +413,7 @@ def _apply_fft_filter(frame: np.ndarray, maskFFT: np.ndarray) -> np.ndarray:
     img_back_complex = cv2.idft(f_ishift)
     img_back = cv2.magnitude(img_back_complex[:, :, 0], img_back_complex[:, :, 1])
     img_back[img_back > 255] = 255
-    return np.uint8(img_back)
+    return np.array(img_back, dtype=np.uint8)
 
 
 def _compute_mean_fluorescence(
@@ -515,10 +515,10 @@ def _process_and_save_frames(
     
     codec = cv2.VideoWriter_fourcc(*compressionCodec)
     
-    if mode == "save" and not path.exists(filePath + "Denoised"):
+    if mode == "save" and not os.path.exists(filePath + "Denoised"):
         os.mkdir(filePath + "Denoised")
 
-    while path.exists(filePath + dataFilePrefix + f"{fileNum:.0f}.avi") and running:
+    while os.path.exists(filePath + dataFilePrefix + f"{fileNum:.0f}.avi") and running:
         cap = cv2.VideoCapture(filePath + dataFilePrefix + f"{fileNum:.0f}.avi")
         writeFile = None
         
@@ -546,7 +546,7 @@ def _process_and_save_frames(
             img_back[img_back > 255] = 255
             img_back = np.uint8(img_back)
             
-            if mode == "save":
+            if mode == "save" and writeFile is not None:
                 writeFile.write(img_back)
             elif mode == "display":
                 im_diff = (128 + (frame - img_back) * 2)
@@ -690,8 +690,8 @@ def import_video_as_numpy_array(
     frameWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     frameHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     if frames != 'all':
-        frameCount = frames
-    buf = np.empty((frameCount, frameHeight, frameWidth, 3), np.dtype('uint8'))
+        frameCount = int(frames)
+    buf = np.empty((int(frameCount), int(frameHeight), int(frameWidth), 3), np.dtype('uint8'))
     fc = 0
     ret = True
     while (fc < frameCount and ret):
@@ -743,7 +743,7 @@ def quat_to_euler(qw: float, qx: float, qy: float, qz: float, degrees: bool = Fa
     return eulerAngles
 
 
-def _conv_quat_to_euler(line: List[Any]) -> Optional[List[Any]]:
+def conv_quat_to_euler(line: List[Any]) -> Optional[List[Any]]:
     """Convert a CSV line of quaternion data to Euler angles.
     
     Args:
@@ -871,7 +871,8 @@ def update_csv_cell(data: Any, columnTitle: str, lineNum: int, csvFile: Union[st
     
     with open(csvFile, 'r') as file:
         reader = csv.DictReader(file)
-        fieldnames = reader.fieldnames
+        if reader.fieldnames is not None:
+            fieldnames = list(reader.fieldnames)
         for row in reader:
             if row.get('line number') == str(lineNum):
                 row[columnTitle] = str(data)

@@ -2,6 +2,8 @@
 
 ACE-neuro is designed to be flexible. Below are common usage patterns and demonstration scripts included in the repository.
 
+**Passing parameters:** pipeline behavior is controlled by **kwargs to `run()`**, optional rows in **`analysis_parameters.csv`**, and (for CLI) built-in defaults merged with that CSV. Read **§3a** in [Getting started](getting_started.md) before copying snippets below.
+
 ## 1. Explicit Paths API
 **Script**: `examples/explicit_paths_demo.py`
 
@@ -39,10 +41,13 @@ The pipeline uses `ace_neuro/shared/file_downloader.py` to check for data locall
 
 ## 4. Interactive Tutorials
 
-Jupyter notebooks spell out **`project_path`** (directory containing **`experiments.csv`** and **`analysis_parameters.csv`**) and **`data_path`** (raw recordings), with validation cells before pipelines run.
+Notebooks emphasize **`project_path`** (CSVs) vs **`data_path`** (raw data) before running pipelines. They render on the docs site via **mkdocs-jupyter** ([Miniscope](https://emelon8.github.io/experiment_analysis/notebooks/miniscope_pipeline_tutorial/), [Ephys](https://emelon8.github.io/experiment_analysis/notebooks/ephys_pipeline_tutorial/), [Multimodal](https://emelon8.github.io/experiment_analysis/notebooks/multimodal_alignment_tutorial/)).
 
-- **Published (MkDocs):** [Miniscope](https://emelon8.github.io/experiment_analysis/notebooks/miniscope_pipeline_tutorial/), [Ephys](https://emelon8.github.io/experiment_analysis/notebooks/ephys_pipeline_tutorial/), [Multimodal](https://emelon8.github.io/experiment_analysis/notebooks/multimodal_alignment_tutorial/)
-- **Source:** [notebooks/miniscope_pipeline_tutorial.ipynb](notebooks/miniscope_pipeline_tutorial.ipynb), [notebooks/ephys_pipeline_tutorial.ipynb](notebooks/ephys_pipeline_tutorial.ipynb), [notebooks/multimodal_alignment_tutorial.ipynb](notebooks/multimodal_alignment_tutorial.ipynb)
+| Notebook | In-repo after `scripts/sync_notebooks_for_docs.sh` |
+|----------|-----------------------------------------------------|
+| Miniscope | [notebooks/miniscope_pipeline_tutorial.ipynb](notebooks/miniscope_pipeline_tutorial.ipynb) |
+| Ephys | [notebooks/ephys_pipeline_tutorial.ipynb](notebooks/ephys_pipeline_tutorial.ipynb) |
+| Multimodal | [notebooks/multimodal_alignment_tutorial.ipynb](notebooks/multimodal_alignment_tutorial.ipynb) |
 
 > [!TIP]
-> **Check out the docstrings!** Every public method in ACE-neuro is documented with Google-style docstrings. Use `help(MiniscopePipeline)` in a Python REPL or check the [API Reference](../api/index.md) for detailed argument descriptions.
+> **Docstrings:** use `help(MiniscopePipeline)` or the [API Reference](api/index.md).

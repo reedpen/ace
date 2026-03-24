@@ -187,7 +187,7 @@ class MiniscopePipeline:
         
         if self.miniscope_data_manager.CNMFE_obj is not None:
             if not headless:
-                if tkinter._default_root:  # Check if Tkinter root exists
+                if hasattr(tkinter, '_default_root') and tkinter._default_root:  # Check if Tkinter root exists
                     tkinter._default_root.destroy()  # Force close any Tkinter root
                 matplotlib.use('Qt5Agg')  # Switch to Qt backend so that we can use interactive plotting during estimate evaluation
             else:
@@ -286,8 +286,47 @@ Examples:
         run_params['headless'] = True
         
     api = MiniscopePipeline()
+    import typing
     try:
-        api.run(**run_params)
+        api.run(
+            line_num=typing.cast(Any, run_params['line_num']),
+            project_path=typing.cast(Any, run_params['project_path']),
+            data_path=typing.cast(Any, run_params['data_path']),
+            filenames=typing.cast(Any, run_params['filenames']),
+            crop=typing.cast(Any, run_params['crop']),
+            crop_coords=typing.cast(Any, run_params.get('crop_coords')),
+            detrend_method=typing.cast(Any, run_params['detrend_method']),
+            df_over_f=typing.cast(Any, run_params['df_over_f']),
+            secs_window=typing.cast(Any, run_params['secs_window']),
+            quantile_min=typing.cast(Any, run_params['quantile_min']),
+            df_over_f_method=typing.cast(Any, run_params['df_over_f_method']),
+            parallel=typing.cast(Any, run_params['parallel']),
+            n_processes=typing.cast(Any, run_params['n_processes']),
+            apply_motion_correction=typing.cast(Any, run_params['apply_motion_correction']),
+            inspect_motion_correction=typing.cast(Any, run_params['inspect_motion_correction']),
+            plot_params=typing.cast(Any, run_params['plot_params']),
+            run_CNMFE=typing.cast(Any, run_params['run_CNMFE']),
+            save_estimates=typing.cast(Any, run_params['save_estimates']),
+            save_CNMFE_estimates_filename=typing.cast(Any, run_params['save_CNMFE_estimates_filename']),
+            save_CNMFE_params=typing.cast(Any, run_params['save_CNMFE_params']),
+            remove_components_with_gui=typing.cast(Any, run_params['remove_components_with_gui']),
+            find_calcium_events=typing.cast(Any, run_params['find_calcium_events']),
+            derivative_for_estimates=typing.cast(Any, run_params['derivative_for_estimates']),
+            event_height=typing.cast(Any, run_params['event_height']),
+            compute_miniscope_phase=typing.cast(Any, run_params['compute_miniscope_phase']),
+            filter_miniscope_data=typing.cast(Any, run_params['filter_miniscope_data']),
+            n=typing.cast(Any, run_params['n']),
+            cut=typing.cast(Any, run_params['cut']),
+            ftype=typing.cast(Any, run_params['ftype']),
+            btype=typing.cast(Any, run_params['btype']),
+            inline=typing.cast(Any, run_params['inline']),
+            compute_miniscope_spectrogram=typing.cast(Any, run_params['compute_miniscope_spectrogram']),
+            window_length=typing.cast(Any, run_params['window_length']),
+            window_step=typing.cast(Any, run_params['window_step']),
+            freq_lims=typing.cast(Any, run_params['freq_lims']),
+            time_bandwidth=typing.cast(Any, run_params['time_bandwidth']),
+            headless=typing.cast(Any, run_params['headless'])
+        )
     except Exception as e:
         print(f"Error occurred during execution: {e}", file=sys.stderr)
         if args.headless:

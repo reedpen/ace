@@ -113,4 +113,4 @@ class Visualizer:
             # Add the label
             axisHandle.text(timestamp, yLimits[1], label, rotation=90, verticalalignment='bottom', fontsize=8)
         
-        axisHandle.axis([xLimits[0], xLimits[1], yLimits[0], yLimits[1]])
+        axisHandle.axis((xLimits[0], xLimits[1], yLimits[0], yLimits[1]))

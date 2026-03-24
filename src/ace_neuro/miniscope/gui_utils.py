@@ -54,7 +54,7 @@ def _create_contour_fig(sfootprints, background, estimates_obj, thr=None, thr_me
 
     # FIX: Explicitly set the axes position to cover the entire figure
     fig = plt.Figure(figsize=(w/dpi, h/dpi), dpi=dpi)
-    ax = fig.add_axes([0, 0, 1, 1]) # [left, bottom, width, height] in figure coordinates (0 to 1)
+    ax = fig.add_axes((0, 0, 1, 1)) # [left, bottom, width, height] in figure coordinates (0 to 1)
 
     ax.imshow(background, interpolation='nearest', cmap=cmap)
     ax.set_xlim(-0.5, w - 0.5)

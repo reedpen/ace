@@ -13,7 +13,9 @@ from joblib import Parallel, delayed, cpu_count
 # noinspection PyUnresolvedReferences
 import colorcet  # this import is necessary to add rainbow colormap to matplotlib
 import matplotlib.pyplot as plt
-from typing import Optional, List, Union, Tuple, Any, Dict
+from matplotlib.figure import Figure, SubFigure
+from matplotlib.axes import Axes
+from typing import Optional, List, Union, Tuple, Any, Dict, TYPE_CHECKING, cast
 
 
 # MULTITAPER SPECTROGRAM #
@@ -35,7 +37,7 @@ def multitaper_spectrogram(
     verbose: bool = True, 
     xyflip: bool = False, 
     ax: Optional[plt.Axes] = None
-) -> Union[Tuple[np.ndarray, np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray, np.ndarray, Tuple[plt.Figure, plt.Axes]]]:
+) -> Union[Tuple[np.ndarray, np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray, np.ndarray, Tuple[Union[Figure, SubFigure, None], Axes]]]:
     """ Compute multitaper spectrogram of timeseries data
     Usage:
     mt_spectrogram, stimes, sfreqs = multitaper_spectrogram(data, fs, frequency_range=None, time_bandwidth=5,
@@ -198,7 +200,7 @@ def multitaper_spectrogram(
         # Set x and y axes
         dx = stimes[1] - stimes[0]
         dy = sfreqs[1] - sfreqs[0]
-        extent = [stimes[0]-dx, stimes[-1]+dx, sfreqs[-1]+dy, sfreqs[0]-dy]
+        extent = (stimes[0]-dx, stimes[-1]+dx, sfreqs[-1]+dy, sfreqs[0]-dy)
 
         # Plot spectrogram
         if ax is None:
@@ -206,7 +208,8 @@ def multitaper_spectrogram(
         else:
             fig = ax.get_figure()
         im = ax.imshow(spect_data, extent=extent, aspect='auto')
-        fig.colorbar(im, ax=ax, label='PSD (dB)', shrink=0.8)
+        if fig is not None:
+            fig.colorbar(im, ax=ax, label='PSD (dB)', shrink=0.8)
         ax.set_xlabel("Time (HH:MM:SS)")
         ax.set_ylabel("Frequency (Hz)")
         im.set_cmap(plt.cm.get_cmap('cet_rainbow4'))
@@ -217,11 +220,12 @@ def multitaper_spectrogram(
             clim = np.percentile(spect_data, [5, 98])  # from 5th percentile to 98th
             im.set_clim(clim)  # actually change colorbar scale
 
-        fig.show()
+        if fig is not None and hasattr(fig, 'show'):
+            fig.show()
         if return_fig:
-            return mt_spectrogram, stimes, sfreqs, (fig, ax)
+            return cast(Any, (mt_spectrogram, stimes, sfreqs, (fig, ax)))
 
-    return mt_spectrogram, stimes, sfreqs
+    return cast(Any, (mt_spectrogram, stimes, sfreqs))
 
 
 # Helper Functions #

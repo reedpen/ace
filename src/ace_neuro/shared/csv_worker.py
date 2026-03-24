@@ -27,6 +27,7 @@ class CSVWorker:
             ValueError: If the CSV is malformed or the line number is not found.
         """
         import csv as csv_mod
+        from typing import cast
         
         path_obj = Path(csv_file)
         
@@ -56,7 +57,10 @@ class CSVWorker:
             row = df.loc[df['line number'].astype(str) == line_num_str]
             if row.empty:
                 raise ValueError(f"Line number {line_num} (as string: '{line_num_str}') not found")
-            return row.squeeze().to_dict()
+            res = row.squeeze()
+            if hasattr(res, 'to_dict'):
+                return cast(Dict[str, Any], res.to_dict())
+            return None
         except FileNotFoundError:
             print(f"File {csv_file} not found")
             return None

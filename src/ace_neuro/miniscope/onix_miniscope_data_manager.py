@@ -28,12 +28,17 @@ class OnixMiniscopeDataManager(MiniscopeDataManager):
         """
         print(f"Reading UCLA V4 miniscope metadata...")
         
-        metadata = {}
-        csv_files = PathFinder.find(self.metadata['calcium imaging directory'], suffix=".csv", prefix="start-time")
+        metadata: Dict[str, Any] = {}
+        if self.metadata is None or 'calcium imaging directory' not in self.metadata:
+            print("Warning: Metadata or calcium imaging directory missing. Proceeding with empty metadata.")
+            return metadata
+
+        csv_files = PathFinder.find(str(self.metadata['calcium imaging directory']), suffix=".csv", prefix="start-time")
         # Filter for miniscope specifically
+        miniscope_files: List[Any] = []
         if isinstance(csv_files, list):
             miniscope_files = [f for f in csv_files if 'miniscope' in str(f)]
-        else:
+        elif csv_files is not None:
             miniscope_files = [csv_files] if 'miniscope' in str(csv_files) else []
         
         if not miniscope_files:
@@ -59,7 +64,10 @@ class OnixMiniscopeDataManager(MiniscopeDataManager):
         Reads ucla-miniscope-v4-clock_*.raw to generate timestamp array.
         Also calculates `self.metadata['frameRate']` based on dt.
         """
-        clock_files = PathFinder.find(self.metadata['calcium imaging directory'], suffix=".raw", prefix="ucla-miniscope-v4-clock")
+        if self.metadata is None or 'calcium imaging directory' not in self.metadata:
+             raise ValueError("Metadata or calcium imaging directory missing. Cannot load timestamps.")
+
+        clock_files = PathFinder.find(str(self.metadata['calcium imaging directory']), suffix=".raw", prefix="ucla-miniscope-v4-clock")
         if not clock_files:
              raise FileNotFoundError("Could not find ucla-miniscope-v4-clock_*.raw file.")
              
@@ -80,15 +88,16 @@ class OnixMiniscopeDataManager(MiniscopeDataManager):
         frame_numbers = list(range(len(time_stamps)))
         
         # Estimate framerate dynamically
-        if len(time_stamps) > 1:
-             dt_avg = np.mean(np.diff(time_stamps))
-             if dt_avg > 0:
-                 self.metadata['frameRate'] = 1.0 / dt_avg
-                 print(f"Estimated framerate: {self.metadata['frameRate']} fps")
-             else:
-                 self.metadata['frameRate'] = 30.0 # fallback
-        else:
-             self.metadata['frameRate'] = 30.0
+        if self.metadata is not None:
+            if len(time_stamps) > 1:
+                 dt_avg = np.mean(np.diff(time_stamps))
+                 if dt_avg > 0:
+                     self.metadata['frameRate'] = 1.0 / dt_avg
+                     print(f"Estimated framerate: {self.metadata['frameRate']} fps")
+                 else:
+                     self.metadata['frameRate'] = 30.0 # fallback
+            else:
+                 self.metadata['frameRate'] = 30.0
              
         return time_stamps, frame_numbers
 

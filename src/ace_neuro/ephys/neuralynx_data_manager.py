@@ -6,7 +6,7 @@ Handles loading and processing Neuralynx .nev and .ncs files into Channel object
 
 import os
 import numpy as np
-from neo.io import NeuralynxIO
+from neo.io import NeuralynxIO  # type: ignore
 from ace_neuro.ephys.ephys_data_manager import EphysDataManager
 from ace_neuro.ephys.block_processor import BlockProcessor
 from ace_neuro.shared.path_finder import PathFinder
@@ -58,7 +58,7 @@ class NeuralynxDataManager(EphysDataManager):
             )
         if not events_path:
             raise FileNotFoundError(f"Could not find Events.nev in {ephys_directory}")
-        return events_path[0]
+        return str(events_path[0])
 
     def get_sync_timestamps(self, channel_name: Optional[str] = None) -> np.ndarray:
         """

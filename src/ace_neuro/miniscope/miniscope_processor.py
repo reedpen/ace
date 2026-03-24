@@ -3,14 +3,15 @@ from ace_neuro.shared.exceptions import ProcessingError
 import ace_neuro.shared.misc_functions as misc_functions
 import caiman as cm
 import numpy as np
-import matplotlib.pyplot as plt
+from pathlib import Path
 import os
+import matplotlib.pyplot as plt
 from copy import deepcopy
 from ace_neuro.miniscope.movie_io import MovieIO
 import matplotlib.widgets
 import tkinter
 import matplotlib
-from typing import List, Optional, Union, Dict, Any, Tuple, TYPE_CHECKING
+from typing import List, Optional, Union, Dict, Any, Tuple, TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from caiman.source_extraction.cnmf import CNMF
@@ -145,6 +146,7 @@ class MiniscopeProcessor:
         Returns:
             Updated data_manager with motion-corrected memory map.
         """
+        motion_correction_object = None
         if apply_motion_correction:
             #apply motion correction
             motion_correction_object, data_manager.opts_caiman = self._apply_motion_correction(data_manager.opts_caiman, dview)
@@ -155,12 +157,24 @@ class MiniscopeProcessor:
             #add our non-motion-corrected movie to opts_caiman to prepare for CNMFE
             data_manager.opts_caiman = self._add_temp_mmap_to_opts_caiman(data_manager.opts_caiman.get('data', 'fnames'), data_manager.opts_caiman, data_manager.opts_caiman.get('patch', 'border_pix'), dview)
         
-        if inspect_motion_correction and apply_motion_correction:
+        if inspect_motion_correction and apply_motion_correction and motion_correction_object is not None:
             self.inspect_motion_correction(motion_correction_object, data_manager.opts_caiman, self.preprocessed_movie, self.data_manager.fr)
         
         return data_manager
     
-    
+    def cleanup_tkinter(self) -> None:
+        """Helper to cleanup tkinter root if it exists."""
+        root = getattr(tkinter, '_default_root', None)
+        if root:
+            root.destroy()
+        # Set Matplotlib backend to Qt5Agg for interactive plotting
+        try:
+            matplotlib.use('Qt5Agg')
+            print("Matplotlib backend set to Qt5Agg")
+        except Exception as e:
+            print(f"Error setting Qt5Agg backend: {e}")
+            matplotlib.use('Agg')  # Fallback to non-interactive backend
+            
     def cnmfe_parameter_handler(self, dm: MiniscopeDataManager, plot_params: bool = False) -> Tuple[MiniscopeDataManager, np.ndarray]:
         """
         -This is an important step before CNMFE. It handles the most important CNMFE parameters.
@@ -177,16 +191,7 @@ class MiniscopeProcessor:
         If patches and overlaps seem a bit large that is ok: our main concern is that they not be too small.
         """
         
-        # Close any existing Tkinter root to avoid conflicts
-        if tkinter._default_root:
-            tkinter._default_root.destroy()
-        # Set Matplotlib backend to Qt5Agg for interactive plotting
-        try:
-            matplotlib.use('Qt5Agg')
-            print("Matplotlib backend set to Qt5Agg")
-        except Exception as e:
-            print(f"Error setting Qt5Agg backend: {e}")
-            matplotlib.use('Agg')  # Fallback to non-interactive backend
+        self.cleanup_tkinter()
             
         #load memory map and recompute movie from it
         Yr, dims, T = cm.load_memmap(dm.opts_caiman.get('data', 'fnames')[0])
@@ -245,19 +250,25 @@ class MiniscopeProcessor:
         """
         print('Inspecting motion correction...')
         if plot_rigid_motion_correction:
-            h, ax = misc_functions._prep_axes(xLabel=['', 'Frames'], yLabel=['', 'Pixels'], subPlots=[1, 2])
+            h, ax_any = misc_functions._prep_axes(xLabel=['', 'Frames'], yLabel=['', 'Pixels'], subPlots=[1, 2])
+            ax = cast(List[Any], ax_any)
             ax[0].imshow(mc.total_template_rig)  # % plot template
             ax[1].plot(mc.shifts_rig)  # % plot rigid shifts
             ax[1].legend(['X Shifts', 'Y Shifts'])
 
         if plot_shifts:
             if opts_caiman.get('motion', 'pw_rigid'):
-                h, ax = misc_functions._prep_axes(xLabel='Frames', yLabel='Pixels')
-                ax.plot(mc.shifts_rig)
-                ax.legend(['X Shifts', 'Y Shifts'])
+                h, ax_single = misc_functions._prep_axes(xLabel='Frames', yLabel='Pixels')
+                if isinstance(ax_single, (list, np.ndarray)):
+                    ax_plot = ax_single[0]
+                else:
+                    ax_plot = ax_single
+                ax_plot.plot(mc.shifts_rig)
+                ax_plot.legend(['X Shifts', 'Y Shifts'])
             else:
-                h, ax = misc_functions._prep_axes(xLabel=['', 'Frames'],
+                h, ax_any = misc_functions._prep_axes(xLabel=['', 'Frames'],
                                                  yLabel=['X Shifts (Pixels)', 'Y Shifts (Pixels)'], subPlots=[2, 1])
+                ax = cast(List[Any], ax_any)
                 ax[0].plot(mc.x_shifts_els)
                 ax[1].plot(mc.y_shifts_els)
 
@@ -300,9 +311,13 @@ class MiniscopeProcessor:
                 if hasattr(self.data_manager, 'diag_logger') and self.data_manager.diag_logger is not None: self.data_manager.diag_logger.pause_timer()
                 cm.concatenate([m1, m2], axis=2).play(fr=15, gain=1.0, magnification=2)
                 if hasattr(self.data_manager, 'diag_logger') and self.data_manager.diag_logger is not None: self.data_manager.diag_logger.resume_timer()
-                
+                if play_concatenated_movies:
+                    print("WARNING! The concatenated clips being shown are different in brightness but still represent your movie before and after motion correction.")
+                    cm.concatenate([self.preprocessed_movie, mc_movie.resize(1, 1, down_sample_ratio)]).play(q_max=99.5, fr=frame_rate, magnification=2)
+            
             if plot_correlation:
-                h, ax = misc_functions._prep_axes(xLabel=['', 'Frames'], yLabel=['', 'Pixels'], subPlots=[1, 2])
+                h, ax_any = misc_functions._prep_axes(xLabel=['Original Movie', 'Motion Corrected Movie'], subPlots=[1, 2])
+                ax = cast(List[Any], ax_any)
                 ax[0].imshow(original_movie.local_correlations(eight_neighbours=True, swap_dim=False))
                 ax[1].imshow(mc_movie.local_correlations(eight_neighbours=True, swap_dim=False))
 
@@ -321,33 +336,32 @@ class MiniscopeProcessor:
                 mc.mmap_file[0], final_size[0], final_size[1],
                 swap_dim, winsize=winsize, play_flow=False, resize_fact_flow=resize_fact_flow)
 
-            h, ax = misc_functions._prep_axes(xLabel=['Frame', 'Original'], yLabel=['Correlation', 'Motion Corrected'],
-                                             subPlots=[2, 1])
-            ax[0].plot(correlations_orig)
-            ax[0].plot(correlations_mc)
-            plt.legend(['Original', 'Motion Corrected'])
-            ax[1].scatter(correlations_orig, correlations_mc)
-            ax[1].plot([0, 1], [0, 1], 'r--')
-            ax[1].axis('square')
-
+            if plot_correlation:
+                fig, ax_any = plt.subplots(1, 2, sharex=True, sharey=True)
+                ax = cast(List[Any], ax_any)
+                ax[0].plot(correlations_orig)
+                ax[0].plot(correlations_mc)
+                ax[0].legend(['Original', 'Corrected'])
+                ax[0].set_title('Correlations with Mean Frame')
+                ax[1].scatter(correlations_orig, correlations_mc)
+                ax[1].plot([0, 1], [0, 1], 'r--')
+                ax[1].axis('square')
+                ax[1].set_xlabel('Original Correlation')
+                ax[1].set_ylabel('Corrected Correlation')
+                ax[1].set_title('Correlation Comparison')
+            
             # print crispness values
             print('Crispness original: ' + str(int(crispness_orig)))
             print('Crispness motion corrected: ' + str(int(crispness_mc)))
 
             # plot the results of Residual Optical Flow
-            fls = [mc.fname[0][:-4] + '_metrics.npz', mc.mmap_file[0][:-4] + '_metrics.npz']
-
-            h, ax = misc_functions._prep_axes(title=['Mean', 'Corr Image', 'Mean Optical Flow', '', '', ''],
-                                             xLabel=['Original', '', '', 'Motion Corrected', '', ''], yLabel=['', '', '', '', '', ''],
-                                             subPlots=[2, 3])
-
-            # plot the results of Residual Optical Flow, This code block below didn't work in old miniscope on Nathan's mac. It will run now, but I still don't think it works
+            fls = [os.path.splitext(mc.fname[0])[0] + '_metrics.npz', os.path.splitext(mc.mmap_file[0])[0] + '_metrics.npz']
             fls = [os.path.splitext(mc.fname[0])[0] + '_metrics.npz', os.path.splitext(mc.mmap_file[0])[0] + '_metrics.npz']
 
-            h, ax = misc_functions._prep_axes(title=['Mean', 'Corr Image', 'Mean Optical Flow', '', '', ''],
+            h, ax_any = misc_functions._prep_axes(title=['Mean', 'Corr Image', 'Mean Optical Flow', '', '', ''],
                                              xLabel=['Original', '', '', 'Motion Corrected', '', ''], yLabel=['', '', '', '', '', ''],
                                              subPlots=[2, 3])
-            
+            ax = cast(List[Any], ax_any)
             
             for cnt, fl in zip(range(len(fls)), fls):
                 print(f"loading file into numpy: {fl}")
@@ -391,7 +405,7 @@ class MiniscopeProcessor:
     
     def _add_temp_mmap_to_opts_caiman(
         self, 
-        filepath: Union[str, List[str], Path], 
+        filepath: Union[str, List[str], Path],
         opts_caiman: 'CNMFParams', 
         bord_px: int, 
         dview: Any = None
@@ -436,18 +450,22 @@ class MiniscopeProcessor:
         Returns:
             Updated data_manager with saved file paths.
         """
-        if save_estimates and dm.CNMFE_obj is not None:
-            save_dir = os.path.join(dm.metadata['calcium imaging directory'], "saved_movies")
+        if dm.metadata is not None:
+            cal_imaging_dir = str(dm.metadata['calcium imaging directory'])
+            save_dir = os.path.join(cal_imaging_dir, "saved_movies")
             os.makedirs(save_dir, exist_ok=True)
-            CNMFE_obj_filepath = os.path.join(save_dir, save_CNMFE_estimates_filename)
-            print('Saving CNMF-E estimates in ' + CNMFE_obj_filepath)
-            dm.CNMFE_obj.save(CNMFE_obj_filepath) #saves the estimates from CNMFE to a file
-            dm.estimates_filepath = CNMFE_obj_filepath
-        
-        if save_CNMFE_params:
-            opts_caiman_json_filepath = os.path.join(dm.metadata['calcium imaging directory'], "saved_movies", "opts_caiman.json")
-            dm.opts_caiman.to_jsonfile(targfn=opts_caiman_json_filepath)
-            dm.opts_caiman_filepath = opts_caiman_json_filepath
+            
+            if save_estimates and dm.CNMFE_obj is not None:
+                CNMFE_obj_filepath = os.path.join(save_dir, str(save_CNMFE_estimates_filename))
+                print('Saving CNMF-E estimates in ' + CNMFE_obj_filepath)
+                dm.CNMFE_obj.save(CNMFE_obj_filepath) #saves the estimates from CNMFE to a file
+                dm.estimates_filepath = CNMFE_obj_filepath
+            
+            if save_CNMFE_params and dm.opts_caiman is not None:
+                opts_caiman_json_filepath = os.path.join(save_dir, "opts_caiman.json")
+                print(f"Saving CaImAn params to {opts_caiman_json_filepath}")
+                dm.opts_caiman.to_jsonfile(targfn=opts_caiman_json_filepath)
+                dm.opts_caiman_filepath = opts_caiman_json_filepath
         
         return dm
             
@@ -464,17 +482,22 @@ class MiniscopeProcessor:
             CaImAn CNMFParams object configured for CNMF-E.
         """
         #convert any analysis_params ending in .0 to integers, adds any needed params
-        for key, value in self.data_manager.analysis_params.items():
-            if isinstance(value, float) and value.is_integer():
-                self.data_manager.analysis_params[key] = int(value)
-        
-        print(f'updated dimensions in bottom with {self.data_manager.movie.shape[1:]}')
-        self.data_manager.analysis_params['fnames'] = self.data_manager.preprocessed_movie_filepath
-        self.data_manager.analysis_params['dims'] = self.data_manager.movie.shape[1:]
-        self.data_manager.analysis_params['fr'] = self.data_manager.fr
+        if self.data_manager.analysis_params is not None:
+            #convert any analysis_params ending in .0 to integers, adds any needed params
+            for key, value in self.data_manager.analysis_params.items():
+                if isinstance(value, float) and value.is_integer():
+                    self.data_manager.analysis_params[key] = int(value)
+            
+            print(f'updated dimensions in bottom with {self.data_manager.movie.shape[1:]}')
+            self.data_manager.analysis_params['fnames'] = self.data_manager.preprocessed_movie_filepath
+            self.data_manager.analysis_params['dims'] = self.data_manager.movie.shape[1:]
+            self.data_manager.analysis_params['fr'] = self.data_manager.fr
         
         # Create a clean dictionary for CaImAn
-        caiman_params = self.data_manager.analysis_params.copy()
+        if self.data_manager.analysis_params is None:
+            caiman_params = {}
+        else:
+            caiman_params = self.data_manager.analysis_params.copy()
         keys_to_remove = [
             'line number', 'id', 'date (YYMMDD)', 'Box calcium folder ID', 
             'calcium imaging directory', 'Box ephys folder ID', 'ephys directory', 

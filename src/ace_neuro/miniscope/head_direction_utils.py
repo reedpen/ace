@@ -1,10 +1,11 @@
 import os
 import csv
-from src.shared.misc_functions import conv_quat_to_euler
+from typing import List, Optional, Union, Any, Tuple, Dict, cast
+from ace_neuro.shared.misc_functions import conv_quat_to_euler
 import matplotlib.pyplot as plt
 
 # two functions for computing/plotting rat head direction data
-def quat_file_to_euler(filename='head_orientation.csv', nf='True'):
+def quat_file_to_euler(filename: str = 'head_orientation.csv', nf: str = 'True'):
     """Convert quaternion orientation data to Euler angles.
     
     Reads a CSV file containing quaternion data and converts each row
@@ -24,29 +25,27 @@ def quat_file_to_euler(filename='head_orientation.csv', nf='True'):
         with open(filename, newline='') as f:
             reader = csv.reader(f)
             if nf == 'True':  # do you want to create a new file
-                with open(new_filename, 'w', newline='') as nf:
-                    writer = csv.writer(nf)
-                    header = []
-                    header.append('Time Stamp (ms)')
-                    header.append('x')
-                    header.append('y')
-                    header.append('z')
+                with open(new_filename, 'w', newline='') as outfile:
+                    writer = csv.writer(outfile)
+                    header = ['Time Stamp (ms)', 'x', 'y', 'z']
                     writer.writerow(header)
                     next(f)
                     for line in reader:
                         euler_angles = conv_quat_to_euler(line)
-                        writer.writerow(euler_angles)
+                        if euler_angles:
+                            writer.writerow(euler_angles)
                 return new_filename
             else:
                 matrix = []
                 next(f)
                 for line in reader:
                     euler_angles = conv_quat_to_euler(line)
-                    matrix.append(euler_angles)
+                    if euler_angles:
+                        matrix.append(euler_angles)
                 return matrix
 
 
-def graph_movement(filename='head_orientation_in_euler_angles.csv', plot_name='movement_plot.png'):
+def graph_movement(filename: str = 'head_orientation_in_euler_angles.csv', plot_name: str = 'movement_plot.png'):
     """Plot angular velocity over time from Euler angle data.
     
     Computes the rate of change of head orientation and plots it over time.
@@ -56,7 +55,7 @@ def graph_movement(filename='head_orientation_in_euler_angles.csv', plot_name='m
         plot_name: Output filename for the saved plot.
     """
     if 'in_euler_angles.csv' not in filename and '.csv' in filename:
-        filename = quat_file_to_euler(filename)
+        filename = cast(str, quat_file_to_euler(filename))
     elif '.csv' not in filename:
         print('!!! ERROR: Invalid file')
         return

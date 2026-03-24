@@ -99,9 +99,10 @@ class ChannelWorker:
         num_tapers = int(time_bandwidth * 2 - 1)
         window_params = [window_length, window_step]  # [window length (s), step size (s)]
 
-        psd, stimes, sfreqs = multitaper_spectrogram(
+        result = multitaper_spectrogram(
             signal, fs, freq_limits, time_bandwidth, num_tapers, window_params, plot_on=False
-        ) # type: ignore
+        )
+        psd, stimes, sfreqs = result[:3]
 
         
         # Convert to decibel scale (dB re 1 µV²/Hz)

@@ -7,13 +7,13 @@ from pathlib import Path
 
 USING_BOX: bool = True # Disabling this disables all the downloading data and instead will simply return None since we assume if you're not using box everthing is downloaded locally
 
-def verify_avi(miniscope_path: str, avi: str, base_file_path: Union[str, Path] = None) -> bool:
+def verify_avi(miniscope_path: str, avi: str, base_file_path: Optional[Union[str, Path]] = None) -> bool:
     """Check if a specific AVI file exists in the Miniscope directory."""
     if base_file_path is None:
         raise ValueError("base_file_path is required.")
     return os_path.exists(f"{base_file_path}/{miniscope_path}/Miniscope/{avi}")
 
-def verify_path(path: str, base_file_path: Union[str, Path] = None) -> bool:
+def verify_path(path: str, base_file_path: Optional[Union[str, Path]] = None) -> bool:
     """Checks the path where the file should be.
     If a folder doesn't exist, break the search and call download_file(path) to download and store the file
     """

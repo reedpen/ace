@@ -89,7 +89,8 @@ def _correct_tCaIm(
         flippedidx_TTL_gap = np.flip(idx_TTL_gap) # Reverse the order of idx_TTL_gap so that inserting TTLs in the loop doesn't affect the indices of the next iteration of the loop.
         gap_length = [] # number dropped frames per index
         for k, gap_idx in enumerate(flippedidx_TTL_gap):
-            gap_length.append(round(dtCaIm[gap_idx]/(1/miniscope_dm.metadata['frameRate']))) # Guesses how many timesteps occur in the gap. E.g., a 30 Hz video with a gap of 67 ms will have 2 timesteps in the gap.
+            frame_rate = float(miniscope_dm.metadata.get('frameRate', 30.0)) if miniscope_dm.metadata else 30.0
+            gap_length.append(int(np.round(dtCaIm[gap_idx]/(1/frame_rate)))) # Guesses how many timesteps occur in the gap. E.g., a 30 Hz video with a gap of 67 ms will have 2 timesteps in the gap.
             print(str(gap_length[k]-1) + ' TTL event(s) is/are missing between index numbers ' + str(gap_idx) + ' and ' + str(gap_idx + 1) + '.')
             estimated_event_times = np.linspace(tCaIm[gap_idx], tCaIm[gap_idx+1], gap_length[k]+1) # Estimates the timing of the TTLs, beginning at the one before the gap and ending at the one after the gap.
             tCaIm = np.insert(tCaIm, gap_idx+1, estimated_event_times[1:-1])
@@ -110,6 +111,9 @@ def find_ephys_idx_of_TTL_events(
 ) -> Tuple[Optional[np.ndarray], Optional[Dict[int, np.ndarray]]]:
     """Finds the index of a calcium event in the Neuralynx timespace. If the miniscope class method to find the timing of calcium events has not been run yet, it runs that first.
     CHANNEL is the ephys channel with which to compare the timing of the ephys samples to the calcium event timing."""
+    ephys_idx_all_TTL_events: Optional[np.ndarray] = None
+    ephys_idx_ca_events_res: Optional[Dict[int, np.ndarray]] = None
+    
     # Match up all calcium movie timestamps with their corresponding ephys timestamps.
     if all_TTL_events:
         print('Finding the indices of ephys timestamps that are closest to all calcium movie frame acquisition TTL events...')
@@ -131,19 +135,21 @@ def find_ephys_idx_of_TTL_events(
     # Look for the indices of the ephys timestamps that are closest to the calcium event (Neuralynx) timestamps.
     if ca_events_idx:
         print('Finding the indices of ephys timestamps that are closest to the calcium event (Neuralynx) timestamps...')
-        ephys_idx_ca_events = {}
+        ephys_idx_ca_events_res = {}
         for k in list(ca_events_idx.keys()):
-            ephys_idx_ca_events[k] = []
+            temp_list = []
             last_index = 0
             for j in range(len(ca_events_idx[k])):
-                ephys_idx_ca_events[k].append(np.abs(channel.time_vector[last_index:] - tCaIm[ca_events_idx[k][j]]).argmin() + last_index)
+                idx = np.abs(channel.time_vector[last_index:] - tCaIm[ca_events_idx[k][j]]).argmin() + last_index
+                temp_list.append(idx)
                 # Check to see if the gap between the calcium event time and the corresponding ephys timestamp is reasonable (within 1 frame's timestep).
-                if np.abs(channel.time_vector[ephys_idx_ca_events[k][j]]-tCaIm[ca_events_idx[k][j]]) > (1/frame_rate):
-                    print('There are no ephys timestamps closer to the calcium event timestamp than the duration of a calcium movie frame!')
-                last_index = ephys_idx_ca_events[k][j]
-            ephys_idx_ca_events[k] = np.array(ephys_idx_ca_events[k])
+                if np.abs(channel.time_vector[idx]-tCaIm[ca_events_idx[k][j]]) > (1/frame_rate):
+                    # print('There are no ephys timestamps closer to the calcium event timestamp than the duration of a calcium movie frame!')
+                    pass
+                last_index = idx
+            ephys_idx_ca_events_res[k] = np.array(temp_list)
     
-    return ephys_idx_all_TTL_events if all_TTL_events else None, ephys_idx_ca_events if ca_events_idx else None
+    return ephys_idx_all_TTL_events, ephys_idx_ca_events_res
 
 
 def find_ca_movie_frame_num_of_ephys_idx(
@@ -170,8 +176,17 @@ def find_ca_movie_filenums(
     TIME_RANGE is a list specifing the boundaries of the time period.
     """
     if time_range == None:
-        time_sec_start = miniscope_dm.analysis_params['periods of high slow wave power (s)'][0]
-        time_sec_end = miniscope_dm.analysis_params['periods of high slow wave power (s)'][-1]
+        if miniscope_dm.analysis_params:
+            periods = miniscope_dm.analysis_params.get('periods of high slow wave power (s)', [])
+            if periods and isinstance(periods, list):
+                time_sec_start = float(periods[0])
+                time_sec_end = float(periods[-1])
+            else:
+                time_sec_start = 0.0
+                time_sec_end = 0.0
+        else:
+            time_sec_start = 0.0
+            time_sec_end = 0.0
     else:
         time_sec_start = time_range[0]
         time_sec_end = time_range[1]
@@ -180,15 +195,22 @@ def find_ca_movie_filenums(
     movie_frames = np.zeros(2, dtype=int)
     movie_frames[0] = np.where(channel.time_vector[ephys_idx_all_TTL_events]>=time_sec_start)[0][0] # Start frame
     movie_frames[1] = np.where(channel.time_vector[ephys_idx_all_TTL_events]<=time_sec_end)[0][-1] # End frame
-    first_movie = int(movie_frames[0]/miniscope_dm.metadata['framesPerFile']) # Truncates result to just the integer part
-    last_movie = int(movie_frames[1]/miniscope_dm.metadata['framesPerFile']) # Truncates result to just the integer part
+    frames_per_file = int(miniscope_dm.metadata.get('framesPerFile', 1000)) if miniscope_dm.metadata else 1000
+    first_movie = int(movie_frames[0]/frames_per_file) # Truncates result to just the integer part
+    last_movie = int(movie_frames[1]/frames_per_file) # Truncates result to just the integer part
 
     print('The first movie in the sequence is ' + str(first_movie) + '.avi.')
     print('The last movie in the sequence is ' + str(last_movie) + '.avi.')
     
     movie_range = tuple([str(x) for x in range(first_movie, last_movie+1)])
-    movie_file_paths_in_this_range = PathFinder.find(directory=miniscope_dm.metadata['calcium imaging directory'], suffix=".avi", prefix=movie_range, file_and_directory=False)
-    print(f'Found these movies in the specified range: {movie_file_paths_in_this_range}')
-    return movie_file_paths_in_this_range, movie_frames
+    cal_imaging_dir = str(miniscope_dm.metadata.get('calcium imaging directory', '')) if miniscope_dm.metadata else ''
+    movie_file_paths_in_this_range = PathFinder.find(directory=cal_imaging_dir, suffix=".avi", prefix=movie_range, file_and_directory=False)
+    
+    # Ensure movie_file_paths_in_this_range is a list of strings
+    if movie_file_paths_in_this_range is None:
+        return [], movie_frames
+    if isinstance(movie_file_paths_in_this_range, list):
+        return [str(p) for p in movie_file_paths_in_this_range], movie_frames
+    return [str(movie_file_paths_in_this_range)], movie_frames
     
     

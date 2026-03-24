@@ -1,7 +1,7 @@
 import numpy as np
 from ace_neuro.shared import misc_functions
 import pandas as pd
-from typing import List, Optional, Union, Dict, Any, Tuple, TYPE_CHECKING
+from typing import Optional, List, Union, Tuple, Any, Dict, TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from ace_neuro.ephys.channel import Channel
@@ -16,16 +16,22 @@ def ephys_phase_ca_events(
     channel_object: channel object containing channel_name, signal, time_vector, smapling_rate, and the phases of the signal
     neurons: the neuron number (i.e., the integer row number in self.estimates.C, starting with 0) of the neuron you want to compare. If you want to compare all of the neurons in the recording, pass 'all' as the argument."""
     print('Comparing the calcium events to the corresponding phase of ' + channel_object.name + '...')
-    ca_events_phases_ephys = {}
     if neurons == 'all':
-        neurons = list(ephys_idx_ca_events.keys())
-    elif type(neurons) != list:
-        neurons = [neurons]
-    for k in neurons:
-        ca_events_phases_ephys[k] = []
+        neurons_list = list(ephys_idx_ca_events.keys())
+    elif not isinstance(neurons, list):
+        neurons_list = [int(neurons)]
+    else:
+        neurons_list = [int(n) for n in neurons]
+    
+    if channel_object.phases is None:
+        raise ValueError(f"Phases for channel {channel_object.name} have not been calculated.")
+        
+    ca_events_phases_ephys: Dict[int, np.ndarray] = {}
+    for k in neurons_list:
+        phases_list = []
         for j in range(len(ephys_idx_ca_events[k])):
-            ca_events_phases_ephys[k].append(channel_object.phases[ephys_idx_ca_events[k][j]])
-        ca_events_phases_ephys[k] = np.array(ca_events_phases_ephys[k])
+            phases_list.append(channel_object.phases[ephys_idx_ca_events[k][j]])
+        ca_events_phases_ephys[k] = np.array(phases_list)
         
     return ca_events_phases_ephys
 
@@ -39,16 +45,19 @@ def miniscope_phase_ca_events(
     miniscope_phases: the phase calculatied from the movie that is given to MiniscopePostprocessor
     neurons: the neuron number (i.e., the integer row number in self.estimates.C, starting with 0) of the neuron you want to compare. If you want to compare all of the neurons in the recording, pass 'all' as the argument."""
     print('Comparing the calcium events to the corresponding phase of the mean fluorescence of the (cropped) miniscope recording...')
-    ca_events_phases_miniscope = {}
     if neurons == 'all':
-        neurons = list(ca_events_idx.keys())
-    elif type(neurons) != list:
-        neurons = [neurons]
-    for k in neurons:
-        ca_events_phases_miniscope[k] = []
+        neurons_list = list(ca_events_idx.keys())
+    elif not isinstance(neurons, list):
+        neurons_list = [int(neurons)]
+    else:
+        neurons_list = [int(n) for n in neurons]
+
+    ca_events_phases_miniscope: Dict[int, np.ndarray] = {}
+    for k in neurons_list:
+        phases_list = []
         for j in range(len(ca_events_idx[k])):
-            ca_events_phases_miniscope[k].append(miniscope_phases[ca_events_idx[k][j]])
-        ca_events_phases_miniscope[k] = np.array(ca_events_phases_miniscope[k])
+            phases_list.append(miniscope_phases[ca_events_idx[k][j]])
+        ca_events_phases_miniscope[k] = np.array(phases_list)
     
     return ca_events_phases_miniscope
 
@@ -63,7 +72,7 @@ def phase_ca_events_histogram(
     mean_density: bool = False, 
     combined: bool = True, 
     plot_histogram: bool = True
-) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray, float, float]]:
+) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray, float, float], Tuple[Dict[int, np.ndarray], Dict[int, np.ndarray]]]:
     """Compute the histogram of calcium events/probability density vs phase.
     Leave the parameters in their default values if you want to plot a combined histogram of phase counts of all neurons
 
@@ -78,48 +87,47 @@ def phase_ca_events_histogram(
     """
         
     if neurons != 'all' and not isinstance(neurons, list):
-        neurons = [neurons]
-        
+        neurons_list_hist: List[int] = [int(neurons)]
+    elif isinstance(neurons, list):
+        neurons_list_hist = [int(n) for n in neurons]
+    else:
+        neurons_list_hist = list(ca_events_phases.keys())
+
     if not plot_histogram:
             #calculates histograms but does not plot them
-            hist, bin_edges = _calculate_histograms_without_plotting(ca_events_phases, neurons, bins, hist_range, density, combined)
-            return hist, bin_edges
+            hist, bin_edges = _calculate_histograms_without_plotting(ca_events_phases, neurons_list_hist, bins, hist_range, density, combined)
+            return cast(Any, (hist, bin_edges))
         
     if mean_density and neurons == 'all':
         #plot the mean of the density histogram of phases of all neurons
-        mean_neuron_vector_theta, mean_neuron_vector_radius = _mean_density_histogram(ca_events_phases, neurons, bins, hist_range)
-        return hist, bin_edges, mean_neuron_vector_theta, mean_neuron_vector_radius
-
+        hist_tuple = _mean_density_histogram(ca_events_phases, neurons, bins, hist_range)
+        return cast(Any, hist_tuple)
             
     if combined:
-        
         if neurons == 'all':
-            
             if density:
                 #plot the probability density of phases of all neurons
-                hist, bin_edges = _density_histogram(ca_events_phases, neurons, bins, hist_range)
+                hist_ret, bin_edges_ret = cast(Any, _density_histogram(ca_events_phases, neurons, bins, hist_range))
             else:
                 #plot the counts of each phase of all neurons
-                hist, bin_edges = _counts_histogram(ca_events_phases, neurons, bins, hist_range)
+                hist_ret, bin_edges_ret = _counts_histogram(ca_events_phases, neurons, bins, hist_range)
                 
-        elif neurons != 'all':
-            
+        else: # neurons != 'all'
             if density:
                 #plot probability density of phases of your selected neurons WARNING THIS FUNCTION MAY NOT WORK AS INTENDED
-                hist, bin_edges = _neuron_subset_density_histogram(ca_events_phases, neurons, bins, hist_range)
+                hist_ret, bin_edges_ret = _neuron_subset_density_histogram(ca_events_phases, neurons_list_hist, bins, hist_range)
             else:
                 #plot the counts of each phase of your selected neurons
-                hist, bin_edges = _neuron_subset_counts_histogram(ca_events_phases, neurons, bins, hist_range)
+                hist_ret, bin_edges_ret = _neuron_subset_counts_histogram(ca_events_phases, neurons_list_hist, bins, hist_range)
                 
-    elif not combined:
-        
+    else: # not combined
         # Plot each of the neurons as separate histograms either all together or a subset of the neurons
         if neurons == 'all':
-            hist, bin_edges = _individual_neuron_histograms(ca_events_phases, bins, hist_range, density)
+            hist_ret, bin_edges_ret = _individual_neuron_histograms(ca_events_phases, bins, hist_range, density)
         else:
-            hist, bin_edges = _neuron_subset_individual_neuron_histograms(ca_events_phases, neurons, bins, hist_range, density)
+            hist_ret, bin_edges_ret = _neuron_subset_individual_neuron_histograms(ca_events_phases, neurons_list_hist, bins, hist_range, density)
     
-    return hist, bin_edges
+    return cast(Any, (hist_ret, bin_edges_ret))
                     
 
 #The following helper methods are all intended to compute histograms using the parameters of the above function
@@ -157,9 +165,16 @@ def _mean_density_histogram(
     hist = np.mean(ca_events_phases_hist, axis=0) # Take the mean across the neurons at each bin.
     hist_error = np.std(ca_events_phases_hist, axis=0) / np.sqrt(np.shape(ca_events_phases_hist)[0]) # Take the standard error of the mean at each bin.
     h, ax = misc_functions._prep_axes(xLabel='Phase (rad)', yLabel='Mean Event Probability', title='Neuron(s): ' + str(neurons))
-    ax.hist(bin_edges[:-1], bin_edges, weights=hist)
+    if isinstance(ax, (list, np.ndarray)):
+        ax_plot = ax[0]
+    else:
+        ax_plot = ax
+        
+    ax_plot.hist(cast(Any, bin_edges[:-1]), bins=cast(Any, bin_edges), weights=cast(Any, hist))
+    ax_plot.set_xlabel('Phase (rad)')
+    ax_plot.set_ylabel('Events')
     bin_midpoints = (bin_edges[1:] + bin_edges[:-1]) / 2
-    ax.errorbar(bin_midpoints, hist, yerr=hist_error, fmt='none', capsize=3)
+    ax_plot.errorbar(bin_midpoints, hist, yerr=hist_error, fmt='none', capsize=3)
     # Find the mean vector of all of the neurons
     mean_neuron_vector = np.mean(mean_ca_events_vectors, axis=0)
     mean_neuron_vector_theta = np.arctan2(mean_neuron_vector[1], mean_neuron_vector[0])
@@ -176,10 +191,15 @@ def _density_histogram(
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Compute stacked density histogram across neurons."""
     # Barstacked density histogram across neurons
-    ca_events_phases_hist = list(ca_events_phases.values())
+    ca_events_phases_hist_list = list(ca_events_phases.values())
     h, ax = misc_functions._prep_axes(xLabel='Phase (rad)', yLabel='Event Probability', title='Neuron(s): ' + str(neurons))
-    hist, bin_edges, _ = ax.hist(ca_events_phases_hist, bins=bins, range=hist_range, density=True, histtype='barstacked')
-    return hist, bin_edges
+    if isinstance(ax, (list, np.ndarray)):
+        ax_plot = ax[0]
+    else:
+        ax_plot = ax
+        
+    hist, bin_edges, _ = ax_plot.hist(ca_events_phases_hist_list, bins=bins, range=hist_range, density=True, histtype='barstacked')
+    return cast(Any, (hist, bin_edges))
 
 
 def _counts_histogram(
@@ -193,8 +213,13 @@ def _counts_histogram(
     for k in list(ca_events_phases.keys()):
         all_ca_events_phases = np.concatenate((all_ca_events_phases, ca_events_phases[k]))
     h, ax = misc_functions._prep_axes(xLabel='Phase (rad)', yLabel='Event Count', title='Neuron(s): ' + str(neurons))
-    hist, bin_edges, _ = ax.hist(all_ca_events_phases, bins=bins, range=hist_range)
-    return hist, bin_edges
+    if isinstance(ax, (list, np.ndarray)):
+        ax_plot = ax[0]
+    else:
+        ax_plot = ax
+        
+    hist, bin_edges, _ = ax_plot.hist(all_ca_events_phases, bins=bins, range=hist_range)
+    return cast(Any, (hist, bin_edges))
 
 
 def _neuron_subset_density_histogram(
@@ -208,8 +233,13 @@ def _neuron_subset_density_histogram(
     for k in neurons:
         ca_events_phases_hist[k] = ca_events_phases[k]
     h, ax = misc_functions._prep_axes(xLabel='Phase (rad)', yLabel='Event Probability', title='Neuron(s): ' + str(neurons))
-    hist, bin_edges, _ = ax.hist(ca_events_phases_hist, bins=bins, range=hist_range, density=True, histtype='barstacked')
-    return hist, bin_edges
+    if isinstance(ax, (list, np.ndarray)):
+        ax_plot = ax[0]
+    else:
+        ax_plot = ax
+        
+    hist, bin_edges, _ = ax_plot.hist(list(ca_events_phases_hist.values()), bins=bins, range=hist_range, density=True, histtype='barstacked')
+    return cast(Any, (hist, bin_edges))
 
 
 def _neuron_subset_counts_histogram(
@@ -223,8 +253,13 @@ def _neuron_subset_counts_histogram(
     for k in neurons:
         all_ca_events_phases = np.concatenate((all_ca_events_phases, ca_events_phases[k]))
     h, ax = misc_functions._prep_axes(xLabel='Phase (rad)', yLabel='Event Count', title='Neuron(s): ' + str(neurons))
-    hist, bin_edges, _ = ax.hist(all_ca_events_phases, bins=bins, range=hist_range)
-    return hist, bin_edges
+    if isinstance(ax, (list, np.ndarray)):
+        ax_plot = ax[0]
+    else:
+        ax_plot = ax
+        
+    hist, bin_edges, _ = ax_plot.hist(all_ca_events_phases, bins=bins, range=hist_range)
+    return cast(Any, (hist, bin_edges))
 
 
 def _individual_neuron_histograms(
@@ -243,8 +278,11 @@ def _individual_neuron_histograms(
         else:
             new_h, new_ax = misc_functions._prep_axes(xLabel='Phase (rad)', yLabel='Event Count', title='Neuron(s): ' + str(k))
         ax.append(new_ax)
-        hist[k], bin_edges[k], _ = ax[i].hist(ca_events_phases[k], bins=bins, range=hist_range, density=density)
-    return hist, bin_edges
+        if hasattr(ax[i], '__getitem__'):
+             cast(Any, ax[i])[0].hist(ca_events_phases[k], bins=bins, range=hist_range, density=density)
+        else:
+             hist[k], bin_edges[k], _ = cast(Any, ax[i]).hist(ca_events_phases[k], bins=bins, range=hist_range, density=density)
+    return cast(Any, (hist, bin_edges))
 
 
 def _neuron_subset_individual_neuron_histograms(
@@ -264,7 +302,7 @@ def _neuron_subset_individual_neuron_histograms(
         else:
             new_h, new_ax = misc_functions._prep_axes(xLabel='Phase (rad)', yLabel='Event Count', title='Neuron(s): ' + str(k))
         ax.append(new_ax)
-        hist[k], bin_edges[k], _ = ax[i].hist(ca_events_phases[k], bins=bins, range=hist_range, density=density)
+        hist[k], bin_edges[k], _ = cast(Any, ax[i]).hist(ca_events_phases[k], bins=bins, range=hist_range, density=density)
     return hist, bin_edges
 
 
@@ -289,34 +327,28 @@ def _calculate_histograms_without_plotting(
     Returns:
         Tuple of (hist, bin_edges) - arrays if combined, dicts if not.
     """
+    hist_dict: Dict[int, np.ndarray] = {}
+    bin_edges_dict: Dict[int, np.ndarray] = {}
+    
+    if neurons == 'all':
+        neurons_list = list(ca_events_phases.keys())
+    elif not isinstance(neurons, list):
+        neurons_list = [int(neurons)]
+    else:
+        neurons_list = [int(n) for n in neurons]
+        
     if combined:
         all_ca_events_phases = np.array([])
-        if neurons == 'all':
-            for k in list(ca_events_phases.keys()):
-                all_ca_events_phases = np.concatenate((all_ca_events_phases, ca_events_phases[k]))
-            hist, bin_edges = np.histogram(all_ca_events_phases, bins=bins, range=hist_range, density=density)
-        else:
-            for k in neurons:
-                all_ca_events_phases = np.concatenate((all_ca_events_phases, ca_events_phases[k]))
-            hist, bin_edges = np.histogram(all_ca_events_phases, bins=bins, range=hist_range, density=density)
+        for k in neurons_list:
+            all_ca_events_phases = np.concatenate((all_ca_events_phases, ca_events_phases[k]))
+        hist_arr, bin_edges_arr = np.histogram(all_ca_events_phases, bins=bins, range=hist_range, density=density)
+        return hist_arr, bin_edges_arr
     else:
-        # Plot each of the neurons as separate histograms
-        hist = {}
-        bin_edges = {}
-        if neurons == 'all':
-            for k in list(ca_events_phases.keys()):
-                hist[k], bin_edges[k] = np.histogram(ca_events_phases[k], bins=bins, range=hist_range, density=density)
-        else:
-            for k in neurons:
-                hist[k], bin_edges[k] = np.histogram(ca_events_phases[k], bins=bins, range=hist_range, density=density)
-    
-    return hist, bin_edges
-        
-        
-
-    
-    
-    
+        for k in neurons_list:
+            h, b = np.histogram(ca_events_phases[k], bins=bins, range=hist_range, density=density)
+            hist_dict[k] = h
+            bin_edges_dict[k] = b
+        return hist_dict, bin_edges_dict
     
     
     

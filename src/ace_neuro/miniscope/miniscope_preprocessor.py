@@ -62,8 +62,9 @@ class MiniscopePreprocessor:
             movie_width = self.data_manager.movie.shape[2]
             final_coords = self.get_crop_coordinates(coords_dict, self.data_manager.projections, movie_height, movie_width, headless=headless)
             if final_coords is not None:
-                self.data_manager.movie, self.data_manager.coords = self.crop_movie(self.data_manager.movie, final_coords)
-                steps_applied.append(f'{crop_job_name_for_file}')
+                self.data_manager.movie, cropped_movie_filepath = self.crop_movie(self.data_manager.movie, final_coords)
+                self.data_manager.preprocessed_movie_filepath = cropped_movie_filepath
+                self.data_manager.coords = final_coords # Store the coordinates used
 
         if detrend_method:
             self.data_manager.movie = self.detrend_movie(self.data_manager.movie, method=detrend_method, plot_trend=not headless)
@@ -213,6 +214,7 @@ class MiniscopePreprocessor:
         Returns:
             Detrended CaImAn movie.
         """
+        detrended_movie = movie # Initialize with the original movie
         try:                    
             if method == 'linear':
                 detrended_movie = detrend(movie, axis=0)
@@ -224,9 +226,6 @@ class MiniscopePreprocessor:
                 trend = mean_trace - median_baseline
                 # Subtract trend from each frame
                 detrended_movie = movie - trend[:, np.newaxis, np.newaxis]
-            else:
-                raise ValueError(f"Unsupported detrending method '{method}'.")
-                return movie
         except (ValueError, np.linalg.LinAlgError) as e:
             print(f"Detrending failed ({e}), returning original movie")
             return movie

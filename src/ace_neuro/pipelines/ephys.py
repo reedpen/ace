@@ -5,6 +5,7 @@ from ace_neuro.ephys.neuralynx_data_manager import NeuralynxDataManager
 from ace_neuro.ephys.visualizer import Visualizer
 from ace_neuro.shared.experiment_data_manager import ExperimentDataManager
 from typing import List, Optional, Union, Dict, Any
+from pathlib import Path
 from ace_neuro.shared import file_downloader
 import logging
 import argparse
@@ -76,7 +77,7 @@ class EphysPipeline:
             plot_spectrogram = False
             plot_phases = False
             matplotlib.use('Agg')
-        elif tkinter._default_root:
+        elif hasattr(tkinter, '_default_root') and tkinter._default_root:
             tkinter._default_root.destroy()
             matplotlib.use('Qt5Agg')
 
@@ -106,6 +107,9 @@ class EphysPipeline:
             base_file_path=experiment_data_manager.data_path
         )
 
+        if ephys_directory is None:
+             raise ValueError("Ephys directory could not be determined from experiment metadata.")
+
         # Create instance of EphysDataManager, process the block into channels
         self.ephys_data_manager = EphysDataManager.create(ephys_directory=ephys_directory, auto_import_ephys_block=True, auto_process_block=False, auto_compute_phases=False)
         self.ephys_data_manager.process_ephys_block_to_channels(remove_artifacts=remove_artifacts, channels=[channel_name])
@@ -115,7 +119,7 @@ class EphysPipeline:
         # If filter_type is not None, filter the signal and add it to ephys_data_manager.channels[channel_name].signal_filtered
         if filter_bool:
             print(f'Filtering ephys data with filter type "{filter_type}" and cut {filter_range}')
-            self.ephys_data_manager.filter_ephys(channel_name, ftype=filter_type, cut=filter_range, replace_signal=False)
+            self.ephys_data_manager.filter_ephys(channel_name, ftype=str(filter_type), cut=filter_range, replace_signal=False)
         
         if compute_phases:
             # Compute phases after filtering
@@ -172,6 +176,8 @@ class EphysPipeline:
 
         experiment_data_manager = ExperimentDataManager(line_num, logging_level = logging_level)
 
+        if experiment_data_manager.metadata is None:
+             raise ValueError(f"Metadata could not be loaded for line {line_num}")
         channels_str = experiment_data_manager.metadata['LFP and EEG CSCs']
         channels_list: List = [*channels_str] # unpack
         

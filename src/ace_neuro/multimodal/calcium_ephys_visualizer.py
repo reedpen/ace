@@ -45,7 +45,11 @@ def create_ca_ephys_movie(
     save_movie: saves the movie to the 'saved_movies' folder in your miniscope directory
     """
     
-    miniscope_dir_path = miniscope_dm.metadata['calcium imaging directory']
+    if miniscope_dm.metadata is None:
+        print("Error: Miniscope metadata is missing. Cannot proceed.")
+        return
+        
+    miniscope_dir_path = str(miniscope_dm.metadata['calcium imaging directory'])
     
     if not plot_ephys and not plot_mean_fluorescence:
         print('Note: you have chosen not to overlay an ephys signal nor the mean fluroescence.')
@@ -57,11 +61,14 @@ def create_ca_ephys_movie(
         movie_filepaths_in_range, movie_frames = find_ca_movie_filenums(channel_object, ephys_idx_all_TTL_events, miniscope_dm, time_range)
         movie = cm.load_movie_chain(movie_filepaths_in_range)      
     elif type(movie_num) == int:
-        movie_filepath = PathFinder.find(miniscope_dir_path, suffix='.avi', prefix=movie_num)
-        movie = cm.load(str(movie_filepath[0]))
+        movie_filepaths = PathFinder.find(miniscope_dir_path, suffix='.avi', prefix=str(movie_num))
+        if movie_filepaths is None or len(movie_filepaths) == 0:
+            print(f"Error: Could not find movie {movie_num}.avi in {miniscope_dir_path}")
+            return
+        movie = cm.load(str(movie_filepaths[0]))
         movie_frames = np.zeros(2, dtype=int)
-        movie_frames[0] = movie_num * miniscope_dm.metadata['framesPerFile'] # Start frame of movieNum
-        movie_frames[1] = (movie_num + 1) * miniscope_dm.metadata['framesPerFile'] - 1 # End frame of movieNum
+        movie_frames[0] = movie_num * int(miniscope_dm.metadata.get('framesPerFile', 1000)) # Start frame of movieNum
+        movie_frames[1] = (movie_num + 1) * int(miniscope_dm.metadata.get('framesPerFile', 1000)) - 1 # End frame of movieNum
     else:
         print('Please provide either a time range or a movie number!')
         return
@@ -84,7 +91,8 @@ def create_ca_ephys_movie(
     
     # Adjust the movie frame numbers so that they are with respect to the imported movies, not the entire recording.
     adjusted_movie_frames = np.zeros(2, dtype=int)
-    adjusted_movie_frames[0] = movie_frames[0] % miniscope_dm.metadata['framesPerFile']
+    frames_per_file = int(miniscope_dm.metadata.get('framesPerFile', 1000))
+    adjusted_movie_frames[0] = movie_frames[0] % frames_per_file
     adjusted_movie_frames[1] = adjusted_movie_frames[0] + np.diff(movie_frames)[0]
     movie = movie[adjusted_movie_frames[0]:adjusted_movie_frames[1]+1]
     
@@ -93,7 +101,7 @@ def create_ca_ephys_movie(
     if plot_mean_fluorescence:
         time_projection -= np.mean(time_projection) # Maybe not needed for the filtered signal, but this is applied to both filtered and non-filtered just in case the filter doesn't exclude the DC component (0 Hz).
     if df_over_sqrt_f:
-        preprocessor = MiniscopePreprocessor(movie, miniscope_dir_path)
+        preprocessor = MiniscopePreprocessor(miniscope_dm)
         movie = preprocessor.compute_df_over_f(movie)
     if vmin == None:
         vmin = movie.mean() - movie.std()*0
@@ -119,6 +127,10 @@ def create_ca_ephys_movie(
         Args:
             frame: Frame index to render.
         """
+        # Initialize variables to avoid unbound name errors
+        mean_fluorescence_segment: Optional[np.ndarray] = None
+        ephys_segment: Optional[np.ndarray] = None
+        
         # Clear the plot
         ax.clear()
 
@@ -138,24 +150,28 @@ def create_ca_ephys_movie(
                 ephys_segment = channel_object.signal[ephys_idx_all_TTL_events[frame-num_frames_of_traces]:ephys_idx_all_TTL_events[frame]]
             else:
                 # ephys_segment = self.ephys[channel_object][ephys_idx_all_TTL_events[frame]-num_frames_of_traces*round(self.samplingRate[channel_object]/self.experiment['frameRate']):ephys_idx_all_TTL_events[frame]] # This makes it so it plots the ephys from before the created movie started.
-                ephys_segment = np.concatenate((np.ones((num_frames_of_traces - frame + movie_frames[0])*round(channel_object.sampling_rate/miniscope_dm.metadata['frameRate'])) * np.nan, channel_object.signal[ephys_idx_all_TTL_events[movie_frames[0]]:ephys_idx_all_TTL_events[frame]]))
+                frame_rate = float(miniscope_dm.metadata.get('frameRate', 30.0))
+                ephys_segment = np.concatenate((np.ones((num_frames_of_traces - frame + movie_frames[0])*round(channel_object.sampling_rate/frame_rate)) * np.nan, channel_object.signal[ephys_idx_all_TTL_events[movie_frames[0]]:ephys_idx_all_TTL_events[frame]]))
 
         # Plot the segment on top of the frame
-        if plot_mean_fluorescence:
+        if plot_mean_fluorescence and isinstance(mean_fluorescence_segment, np.ndarray):
             fluorescence_scaling = (movie.shape[1] / 3) / np.max(np.abs(time_projection))
             ax.plot(np.linspace(-0.5, movie.shape[2]-0.5, len(mean_fluorescence_segment)), mean_fluorescence_segment*fluorescence_scaling + (movie.shape[1]/6), color='blue', linewidth=2)
-        if plot_ephys:
+        if plot_ephys and isinstance(ephys_segment, np.ndarray):
             ephys_scaling = movie.shape[1] / np.max(np.abs(channel_object.signal))
             ax.plot(np.linspace(-0.5, movie.shape[2]-0.5, len(ephys_segment)), ephys_segment*ephys_scaling + (movie.shape[1]/6), color='red', linewidth=2)
         if time_stamps:
             time_stamp = channel_object.time_vector[ephys_idx_all_TTL_events[frame]] - channel_object.time_vector[ephys_idx_all_TTL_events[movie_frames[0]]]
             ax.text(0.9375*movie.shape[2], 10*movie.shape[1]/608, '{:.2f}'.format(time_stamp) + ' s', ha='right', color=[1, 1, 1]) # Also could do color=[0.7,0.7,1]
         if mark_start_systemic:
-            if (ephys_idx_all_TTL_events[frame] >= t_ephys_sys_start_idx) and (ephys_idx_all_TTL_events[frame] < t_ephys_sys_start_idx + int(float(miniscope_dm.metadata['total systemic time (min)']) * 60 * channel_object.sampling_rate)):
-                ax.text(0.0625*movie.shape[2], 550*movie.shape[1]/608, miniscope_dm.metadata['systemic drug'] + ' infusion', ha='left', color=[1, 0, 0])
+            total_sys_time = miniscope_dm.metadata.get('total systemic time (min)', 0)
+            sys_drug = miniscope_dm.metadata.get('systemic drug', 'Drug')
+            if (ephys_idx_all_TTL_events[frame] >= t_ephys_sys_start_idx) and (ephys_idx_all_TTL_events[frame] < t_ephys_sys_start_idx + int(float(total_sys_time) * 60 * channel_object.sampling_rate)):
+                ax.text(0.0625*movie.shape[2], 550*movie.shape[1]/608, str(sys_drug) + ' infusion', ha='left', color=[1, 0, 0])
         ax.set_xlim(-0.5, movie.shape[2]-0.5)
         ax.set_ylim(-0.5, movie.shape[1]-0.5)
         ax.set_axis_off()
+        return []
 
     # Create the animation
     ani = animation.FuncAnimation(fig, update, frames=len(movie), interval=playback_interval, repeat=False)

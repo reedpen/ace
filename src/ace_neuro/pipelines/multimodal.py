@@ -1,55 +1,85 @@
-from ace_neuro.pipelines.miniscope import MiniscopePipeline
-from ace_neuro.pipelines.ephys import EphysPipeline
-from ace_neuro.multimodal.miniscope_ephys_alignment_utils import sync_neuralynx_miniscope_timestamps, find_ephys_idx_of_TTL_events, find_ca_movie_frame_num_of_ephys_idx, find_ca_movie_filenums
-from ace_neuro.multimodal.calcium_ephys_visualizer import create_ca_ephys_movie
-from ace_neuro.multimodal.phase_utils import ephys_phase_ca_events, miniscope_phase_ca_events, phase_ca_events_histogram
 import argparse
 import sys
 import traceback
+import typing
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+
+from ace_neuro.multimodal.miniscope_ephys_alignment_utils import (
+    find_ca_movie_frame_num_of_ephys_idx,
+    find_ephys_idx_of_TTL_events,
+    sync_neuralynx_miniscope_timestamps,
+)
+from ace_neuro.multimodal.phase_utils import ephys_phase_ca_events, miniscope_phase_ca_events, phase_ca_events_histogram
+from ace_neuro.pipelines.ephys import EphysPipeline
+from ace_neuro.pipelines.miniscope import MiniscopePipeline
 from ace_neuro.shared.config_utils import load_analysis_params
-from typing import List, Optional, Union, Dict, Any, Tuple, TYPE_CHECKING
+
 
 class MultimodalPipeline:
-    """High-level API for combined ephys and calcium imaging analysis.
-    
-    Orchestrates synchronized analysis of Neuralynx electrophysiology and
-    miniscope calcium imaging data, including timestamp alignment and
-    phase-based event analysis.
-    
-    Attributes:
-        ephys_data_manager: EphysDataManager (via ephys_pipeline).
-        miniscope_data_manager: MiniscopeDataManager (via miniscope_pipeline).
+    """Orchestrates ephys + miniscope analysis and multimodal alignment.
+
+    After :meth:`run`, these instance attributes are populated (``None`` if a
+    stage did not apply):
+
+    - :attr:`ephys_pipeline` — :class:`EphysPipeline` instance used for this run
+    - :attr:`miniscope_pipeline` — :class:`MiniscopePipeline` instance used
+    - :attr:`t_ca_im` — aligned calcium frame times from TTL sync
+    - :attr:`low_confidence_periods` — sync quality mask from alignment
+    - :attr:`ephys_idx_all_TTL_events` — ephys sample indices for TTL events
+    - :attr:`ephys_idx_ca_events` — ephys indices at calcium events (if ``ca_events``)
+    - :attr:`ca_frame_num_of_ephys_idx` — per-frame mapping (if TTL indices exist)
+    - :attr:`ca_events_phases_ephys` — phase samples for CA events (ephys band)
+    - :attr:`ca_events_phases_miniscope` — phase samples for CA events (miniscope)
+    - :attr:`phase_hist_ephys` / :attr:`phase_bin_edges_ephys` — histogram of ephys phases
+    - :attr:`phase_hist_miniscope` / :attr:`phase_bin_edges_miniscope` — histogram of miniscope phases
     """
-        
-    
+
+    def __init__(self) -> None:
+        self.miniscope_pipeline = MiniscopePipeline()
+        self.ephys_pipeline = EphysPipeline()
+        self.t_ca_im: np.ndarray | None = None
+        self.low_confidence_periods: Any = None
+        self.ephys_idx_all_TTL_events: Any = None
+        self.ephys_idx_ca_events: Any = None
+        self.ca_frame_num_of_ephys_idx: Any = None
+        self.ca_events_phases_ephys: Any = None
+        self.ca_events_phases_miniscope: Any = None
+        self.phase_hist_ephys: Any = None
+        self.phase_bin_edges_ephys: Any = None
+        self.phase_hist_miniscope: Any = None
+        self.phase_bin_edges_miniscope: Any = None
+
     def run(
         self,
         line_num: int,
-        project_path: Optional[Union[str, Path]] = None,
-        data_path: Optional[Union[str, Path]] = None,
+        project_path: str | Path | None = None,
+        data_path: str | Path | None = None,
         # ephys parameters
         channel_name: str = 'PFCLFPvsCBEEG',
         remove_artifacts: bool = False,
-        filter_type: Optional[str] = None,
-        filter_range: List[float] = [0.5, 4],
+        filter_type: str | None = None,
+        filter_range: list[float] = [0.5, 4],
         plot_channel: bool = False,
         plot_spectrogram: bool = False,
         plot_phases: bool = False,
         logging_level: str = "CRITICAL",
-        
+
         # miniscope parameters
-        miniscope_filenames: List[str] = [],
+        miniscope_filenames: list[str] = [],
         # preprocessing parameters
         crop: bool = True,
-        crop_coords: Optional[Union[List[int], Tuple[int, int, int, int]]] = None,
+        crop_coords: list[int] | tuple[int, int, int, int] | None = None,
         detrend_method: str = 'median',
         df_over_f: bool = False,
         # if df_over_f = True
-        secs_window: float = 5,                     
+        secs_window: float = 5,
         quantile_min: float = 8,
         df_over_f_method: str = 'delta_f_over_sqrt_f',
 
-        # processing parameters    
+        # processing parameters
         parallel: bool = False,
         n_processes: int = 6,
         apply_motion_correction: bool = True,
@@ -59,40 +89,40 @@ class MultimodalPipeline:
         save_estimates: bool = True,
         save_CNMFE_estimates_filename: str = 'estimates.hdf5',
         save_CNMFE_params: bool = False,
-        
+
         # post-processing parameters
-        remove_components_with_gui: bool = True,  
+        remove_components_with_gui: bool = True,
         find_calcium_events: bool = True,
-        derivative_for_estimates: str = 'first', 
-        event_height: float = 5, 
-        compute_miniscope_phase: bool = True, 
+        derivative_for_estimates: str = 'first',
+        event_height: float = 5,
+        compute_miniscope_phase: bool = True,
         filter_miniscope_data: bool = True,
-        n: int = 2, 
-        cut: List[float] = [0.1, 1.5], 
-        ftype: str = 'butter', 
-        btype: str = 'bandpass', 
+        n: int = 2,
+        cut: list[float] = [0.1, 1.5],
+        ftype: str = 'butter',
+        btype: str = 'bandpass',
         inline: bool = False,
         compute_miniscope_spectrogram: bool = True,
-        window_length: float = 30, 
-        window_step: float = 3, 
-        freq_lims: List[float] = [0, 15], 
-        time_bandwidth: float = 2,
-    
+        window_length: float = 30,
+        window_step: float = 3,
+        freq_lims: list[float] = [0, 15],
+        time_bandwidth: float = 23,
+
         # multimodal parameters
-        delete_TTLs: bool = True, 
-        fix_TTL_gaps: bool = False, 
+        delete_TTLs: bool = True,
+        fix_TTL_gaps: bool = False,
         only_experiment_events: bool = True,
-        all_TTL_events: bool = True, 
+        all_TTL_events: bool = True,
         ca_events: bool = False,
-        time_range: Optional[List[float]] = None,
+        time_range: list[float] | None = None,
         headless: bool = False
     ) -> None:
         """Run the complete multimodal analysis pipeline.
-        
+
         Executes both ephys and miniscope pipelines, synchronizes their
         timestamps via TTL events, and performs phase-locked calcium event
         analysis.
-        
+
         Args:
             line_num: Experiment line number in experiments.csv.
             channel_name: Ephys channel name to analyze.
@@ -121,111 +151,126 @@ class MultimodalPipeline:
             time_range: Optional [start, end] time range to analyze.
             headless: If True, disable all GUI interactions.
         """
-        
-        
-        
-        ephys_pipeline = EphysPipeline()
-        # Pass headless and paths to ephys api
-        ephys_pipeline.run(
-            line_num=line_num, 
+        self.t_ca_im = None
+        self.low_confidence_periods = None
+        self.ephys_idx_all_TTL_events = None
+        self.ephys_idx_ca_events = None
+        self.ca_frame_num_of_ephys_idx = None
+        self.ca_events_phases_ephys = None
+        self.ca_events_phases_miniscope = None
+        self.phase_hist_ephys = None
+        self.phase_bin_edges_ephys = None
+        self.phase_hist_miniscope = None
+        self.phase_bin_edges_miniscope = None
+
+        self.ephys_pipeline = EphysPipeline()
+        self.ephys_pipeline.run(
+            line_num=line_num,
             project_path=project_path,
             data_path=data_path,
-            channel_name=channel_name, 
-            remove_artifacts=remove_artifacts, 
-            filter_type=filter_type, 
-            filter_range=filter_range, 
-            plot_channel=plot_channel, 
-            plot_spectrogram=plot_spectrogram, 
-            plot_phases=plot_phases, 
-            logging_level=logging_level, 
+            channel_name=channel_name,
+            remove_artifacts=remove_artifacts,
+            filter_type=filter_type,
+            filter_range=filter_range,
+            plot_channel=plot_channel,
+            plot_spectrogram=plot_spectrogram,
+            plot_phases=plot_phases,
+            logging_level=logging_level,
             headless=headless
         )
-        
-        
-        
-        miniscope_pipeline = MiniscopePipeline()
-        # Pass headless and paths to miniscope api
-        miniscope_pipeline.run(
-            line_num=line_num, 
+
+        self.miniscope_pipeline = MiniscopePipeline()
+        self.miniscope_pipeline.run(
+            line_num=line_num,
             project_path=project_path,
             data_path=data_path,
-            filenames=miniscope_filenames, 
-            crop=crop, 
-            crop_coords=crop_coords, 
-            detrend_method=detrend_method, 
-            df_over_f=df_over_f, 
-            secs_window=secs_window, 
-            quantile_min=quantile_min, 
-            df_over_f_method=df_over_f_method, 
-            parallel=parallel, 
-            n_processes=n_processes, 
-            apply_motion_correction=apply_motion_correction, 
-            inspect_motion_correction=inspect_motion_correction, 
+            filenames=miniscope_filenames,
+            crop=crop,
+            crop_coords=crop_coords,
+            detrend_method=detrend_method,
+            df_over_f=df_over_f,
+            secs_window=secs_window,
+            quantile_min=quantile_min,
+            df_over_f_method=df_over_f_method,
+            parallel=parallel,
+            n_processes=n_processes,
+            apply_motion_correction=apply_motion_correction,
+            inspect_motion_correction=inspect_motion_correction,
             plot_params=plot_params,
-            run_CNMFE=run_CNMFE, 
-            save_estimates=save_estimates, 
-            save_CNMFE_estimates_filename=save_CNMFE_estimates_filename, 
-            save_CNMFE_params=save_CNMFE_params, 
-            remove_components_with_gui=remove_components_with_gui, 
-            find_calcium_events=find_calcium_events, 
-            derivative_for_estimates=derivative_for_estimates, 
+            run_CNMFE=run_CNMFE,
+            save_estimates=save_estimates,
+            save_CNMFE_estimates_filename=save_CNMFE_estimates_filename,
+            save_CNMFE_params=save_CNMFE_params,
+            remove_components_with_gui=remove_components_with_gui,
+            find_calcium_events=find_calcium_events,
+            derivative_for_estimates=derivative_for_estimates,
             event_height=event_height,
-            compute_miniscope_phase=compute_miniscope_phase, 
-            filter_miniscope_data=filter_miniscope_data, 
-            n=n, 
-            cut=cut, 
-            ftype=ftype, 
-            btype=btype, 
-            inline=inline, 
-            compute_miniscope_spectrogram=compute_miniscope_spectrogram, 
-            window_length=window_length, 
-            window_step=window_step, 
-            freq_lims=freq_lims, 
-            time_bandwidth=time_bandwidth, 
+            compute_miniscope_phase=compute_miniscope_phase,
+            filter_miniscope_data=filter_miniscope_data,
+            n=n,
+            cut=cut,
+            ftype=ftype,
+            btype=btype,
+            inline=inline,
+            compute_miniscope_spectrogram=compute_miniscope_spectrogram,
+            window_length=window_length,
+            window_step=window_step,
+            freq_lims=freq_lims,
+            time_bandwidth=time_bandwidth,
             headless=headless
         )
-        
 
+        channel_object = self.ephys_pipeline.ephys_data_manager.get_channel(channel_name)
+        frame_rate = self.miniscope_pipeline.miniscope_data_manager.fr
+        ca_events_idx = self.miniscope_pipeline.miniscope_data_manager.ca_events_idx
+        miniscope_phases = self.miniscope_pipeline.miniscope_data_manager.miniscope_phases
 
-
-        
-        #pull everything we need to run multi modal analysis:
-        channel_object = ephys_pipeline.ephys_data_manager.get_channel(channel_name)
-        frame_rate = miniscope_pipeline.miniscope_data_manager.fr
-        ca_events_idx = miniscope_pipeline.miniscope_data_manager.ca_events_idx
-        miniscope_phases = miniscope_pipeline.miniscope_data_manager.miniscope_phases
-        
-        
-        
-        tCaIm, low_confidence_periods, channel_object, miniscope_dm = sync_neuralynx_miniscope_timestamps(
-            channel_object, 
-            miniscope_pipeline.miniscope_data_manager, 
-            ephys_pipeline.ephys_data_manager,
-            delete_TTLs=delete_TTLs, 
-            fix_TTL_gaps=fix_TTL_gaps, 
+        t_ca_im, low_confidence_periods, channel_object, miniscope_dm = sync_neuralynx_miniscope_timestamps(
+            channel_object,
+            self.miniscope_pipeline.miniscope_data_manager,
+            self.ephys_pipeline.ephys_data_manager,
+            delete_TTLs=delete_TTLs,
+            fix_TTL_gaps=fix_TTL_gaps,
             only_experiment_events=only_experiment_events
         )
-        
 
-        
-        # set changed variables
         print("\nSuccess! Setting changed variables.")
-        miniscope_pipeline.miniscope_data_manager = miniscope_dm
-        ephys_pipeline.ephys_data_manager.channels[channel_name] = channel_object
-        
-        
-        ephys_idx_all_TTL_events, ephys_idx_ca_events = find_ephys_idx_of_TTL_events(tCaIm, channel_object, frame_rate, all_TTL_events=all_TTL_events, ca_events_idx=ca_events_idx if ca_events else None)
-        ca_frame_num_of_ephys_idx = find_ca_movie_frame_num_of_ephys_idx(channel_object, ephys_idx_all_TTL_events)
-        
-        ca_events_phases_ephys = ephys_phase_ca_events(ephys_idx_ca_events, channel_object, neurons='all')
-        ca_events_phases_miniscope = miniscope_phase_ca_events(ca_events_idx, miniscope_phases, neurons='all')
-        
-        
-        hist1, bin_edges1 = phase_ca_events_histogram(ca_events_phases_ephys)
-        
-        
-        hist2, bin_edges2 = phase_ca_events_histogram(ca_events_phases_miniscope)
-    
+        self.miniscope_pipeline.miniscope_data_manager = miniscope_dm
+        self.ephys_pipeline.ephys_data_manager.channels[channel_name] = channel_object
+
+        self.t_ca_im = t_ca_im
+        self.low_confidence_periods = low_confidence_periods
+
+        ephys_idx_all_TTL_events, ephys_idx_ca_events = find_ephys_idx_of_TTL_events(
+            t_ca_im, channel_object, frame_rate, all_TTL_events=all_TTL_events, ca_events_idx=ca_events_idx if ca_events else None
+        )
+        self.ephys_idx_all_TTL_events = ephys_idx_all_TTL_events
+        self.ephys_idx_ca_events = ephys_idx_ca_events
+
+        if ephys_idx_all_TTL_events is not None:
+            self.ca_frame_num_of_ephys_idx = find_ca_movie_frame_num_of_ephys_idx(channel_object, ephys_idx_all_TTL_events)
+
+        if ephys_idx_ca_events is not None:
+            self.ca_events_phases_ephys = ephys_phase_ca_events(ephys_idx_ca_events, channel_object, neurons='all')
+            self.ca_events_phases_miniscope = miniscope_phase_ca_events(ca_events_idx, miniscope_phases, neurons='all')
+
+        hist1, bin_edges1 = None, None
+        hist2, bin_edges2 = None, None
+
+        if ephys_idx_ca_events is not None:
+            if self.ca_events_phases_ephys is not None:
+                res1 = phase_ca_events_histogram(self.ca_events_phases_ephys)
+                hist1, bin_edges1 = res1[0], res1[1]
+
+            if self.ca_events_phases_miniscope is not None:
+                res2 = phase_ca_events_histogram(self.ca_events_phases_miniscope)
+                hist2, bin_edges2 = res2[0], res2[1]
+
+        self.phase_hist_ephys = hist1
+        self.phase_bin_edges_ephys = bin_edges1
+        self.phase_hist_miniscope = hist2
+        self.phase_bin_edges_miniscope = bin_edges2
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -235,7 +280,7 @@ if __name__ == "__main__":
 Examples:
   # Run with explicit project path
   python -m ace_neuro.pipelines.multimodal --line-num 97 --project-path /path/to/project
-  
+
   # Run in headless mode (no GUI) for batch processing
   python -m ace_neuro.pipelines.multimodal --line-num 97 --project-path /path/to/project --headless
 """
@@ -248,9 +293,9 @@ Examples:
                         help="Base path for raw experimental data")
     parser.add_argument('--headless', action='store_true',
                         help="Run in headless mode (no GUI)")
-    
+
     args = parser.parse_args()
-    
+
     # Default parameters
     run_params = {
         'line_num': args.line_num,
@@ -263,7 +308,7 @@ Examples:
         'plot_spectrogram': False,
         'plot_phases': False,
         'logging_level': "CRITICAL",
-        
+
         # miniscope parameters
         'miniscope_filenames': ['0.avi'],
         # preprocessing parameters
@@ -308,17 +353,17 @@ Examples:
         'ca_events': True,
         'time_range': None
     }
-    
+
     # Override defaults with parameters from analysis_parameters.csv
     try:
         csv_params = load_analysis_params(
-            args.line_num, 
+            args.line_num,
             project_path=Path(args.project_path) if args.project_path else None
         )
         run_params.update(csv_params)
     except FileNotFoundError:
         print("No analysis_parameters.csv found. Using default parameters.", flush=True)
-    
+
     # CLI overrides
     if args.project_path:
         run_params['project_path'] = args.project_path
@@ -327,9 +372,13 @@ Examples:
     if args.headless:
         run_params['headless'] = True
 
+    # Initialize phase variables to None to avoid unbound name errors
+    # ca_events_phases_ephys and ca_events_phases_miniscope are defined in run()
+
     api = MultimodalPipeline()
+    import typing
     try:
-        api.run(**run_params)
+        api.run(**typing.cast(dict[str, Any], run_params))
     except Exception:
         if args.headless:
             traceback.print_exc()

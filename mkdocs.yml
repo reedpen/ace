@@ -63,6 +63,9 @@ plugins:
             docstring_style: google
             show_source: true
             show_root_heading: true
+  - mkdocs-jupyter:
+      execute: false
+      include_source: true
 
 nav:
   - Home: index.md
@@ -82,7 +85,4 @@ nav:
       - Miniscope Components: api/miniscope.md
       - Ephys Components: api/ephys.md
       - Shared Utils: api/shared.md
-  - Community:
-      - Contributing: contributing.md
-      - Code of Conduct: code_of_conduct.md
-      - Changelog: changelog.md
+  - Deploying the docs: deployment.md

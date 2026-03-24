@@ -60,12 +60,14 @@ dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "ruff>=0.4",
-    "mypy>=1.8",
+    "pyrefly",
 ]
 docs = [
     "mkdocs-material>=9.0",
     "mkdocstrings[python]>=0.24",
     "pymdown-extensions>=10.0",
+    "mkdocs-jupyter>=0.24.0",
+    "python-markdown-math>=0.8",
 ]
 all = [
     "ace-neuro[box]",
@@ -120,10 +122,23 @@ ignore = [
 
 
 # ---------------------------------------------------------------------------
-# Mypy (type checking)
+# Pyrefly (type checking)
 # ---------------------------------------------------------------------------
-[tool.mypy]
-python_version = "3.10"
-warn_return_any = true
-warn_unused_configs = true
-ignore_missing_imports = true
+[tool.pyrefly]
+python-version = "3.10"
+ignore-missing-imports = [
+    "caiman",
+    "caiman.base.movies",
+    "caiman.source_extraction.cnmf",
+    "caiman.source_extraction.cnmf.params",
+    "caiman.source_extraction.cnmf.estimates",
+    "PySimpleGUI",
+    "cv2",
+    "scipy",
+    "scipy.signal",
+    "scipy.signal.windows",
+    "box_sdk_gen",
+    "joblib",
+    "colorcet",
+    "h5py",
+]

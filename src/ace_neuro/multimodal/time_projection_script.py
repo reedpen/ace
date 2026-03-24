@@ -31,10 +31,16 @@ for line_num in line_nums:
         movie = miniscope_data_manager.movie
     
     #get all avi files
+    if miniscope_data_manager.metadata is None:
+        raise ValueError("Metadata is None")
     movie_directory = miniscope_data_manager.metadata['calcium imaging directory']
     movie_filepaths = PathFinder.find(movie_directory, suffix='.avi')
     print(movie_filepaths)
     
+    if movie_filepaths is None:
+        print("No movie filepaths found")
+        continue
+
     sorted_movie_filepaths = sorted(movie_filepaths, key=lambda p: int(p.stem))
     
     print(sorted_movie_filepaths)

@@ -20,8 +20,9 @@ analysis_parameters.csv
 box_credentials.py
 src/ace_neuro/shared/box_credentials.py
 
-# Generated docs (built by MkDocs)
-/docs/
+# MkDocs — build output only (source lives in docs/)
+site/
+.cache/
 
 # IDE / OS
 .DS_Store

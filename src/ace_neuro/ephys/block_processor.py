@@ -20,9 +20,9 @@ An event object in neo contains info like "light turned on: 5:48" or "drug appli
 
 """
 import numpy as np
-from scipy.signal.windows import hann
+from scipy.signal.windows import hann  # type: ignore
 from ace_neuro.ephys.channel import Channel
-from neo.core import Block
+from neo.core import Block  # type: ignore
 import logging
 from typing import List, Dict, Union, Tuple, Optional, Any
 
@@ -224,7 +224,7 @@ class BlockProcessor:
             # Avoid overfilling
             end_idx = min(end_idx, n_points)  # NEW: Prevent index overflow
             if start_idx > 0 and np.isnan(signal[start_idx - 1]):
-                self._interpolate_missing_data(channel_name, signal, start_idx, time_vector, sig.t_start.magnitude)
+                self._interpolate_missing_data(channel_name, signal, int(start_idx), time_vector, sig.t_start.magnitude)
             # Assign flattened data
             signal[start_idx:end_idx] = signal_data[:end_idx-start_idx]  # MODIFIED
 

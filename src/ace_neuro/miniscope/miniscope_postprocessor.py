@@ -264,6 +264,7 @@ class MiniscopePostprocessor:
         ca_events_idx = {}
         for k in neuron_indices:
             trace = estimates.C[k]
+            data = np.array([])
             if derivative == 'zeroth':
                 data = trace
             elif derivative == 'first':
@@ -309,7 +310,7 @@ class MiniscopePostprocessor:
         print('Computing spectrogram of average miniscope fluorescence...')
         # Set spectrogram params
         fs = int(frame_rate)
-        num_tapers = time_bandwidth * 2 - 1
+        num_tapers = int(time_bandwidth * 2 - 1)
         window_params = [window_length, window_step]
         minNfft = 0  # No minimum nfft
         detrend_opt = 'constant'  # detrend each window by subtracting the average
@@ -323,7 +324,8 @@ class MiniscopePostprocessor:
         xyflip = False  # do not transpose spect output matrix
         
         # Compute the multitaper spectrogram and convert the output to decibels
-        PSDSpectMiniscope, tSpect, freqsSpect = multitaper_spectrogram(data, fs, freq_lims, time_bandwidth, num_tapers, window_params, minNfft, detrend_opt, multiprocess, n_jobs, weighting, plot_on, return_fig, clim_scale, verbose, xyflip)
+        mt_result = multitaper_spectrogram(data, fs, freq_lims, time_bandwidth, num_tapers, window_params, minNfft, detrend_opt, multiprocess, n_jobs, weighting, plot_on, return_fig, clim_scale, verbose, xyflip)
+        PSDSpectMiniscope, tSpect, freqsSpect = mt_result[:3]
         pSpectMiniscope = 10 * np.log10(PSDSpectMiniscope)
         
         if plot_spectrogram:

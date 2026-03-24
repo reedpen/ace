@@ -1,5 +1,5 @@
 from ace_neuro.ephys.channel_worker import ChannelWorker
-from ace_neuro.ephys.ephys_data_manager import EphysDataManager
+from ace_neuro.ephys.neuralynx_data_manager import NeuralynxDataManager
 from ace_neuro.shared.experiment_data_manager import ExperimentDataManager
 import logging
 
@@ -25,8 +25,8 @@ channel_name = 'PFCLFPvsCBEEG'
 
 experiment_data_manager = ExperimentDataManager(line_num, project_path=project_path, logging_level=logging_level)
 ephys_directory = experiment_data_manager.get_ephys_directory()
-ephys_data_manager = EphysDataManager(ephys_directory, auto_import_ephys_block=True, auto_process_block=False)
-ephys_data_manager.process_ephys_block_to_channels(remove_artifacts=remove_artifacts, channels=channel_name)
+ephys_data_manager = NeuralynxDataManager(ephys_directory, auto_import_ephys_block=True, auto_process_block=False)
+ephys_data_manager.process_ephys_block_to_channels(remove_artifacts=remove_artifacts, channels=[channel_name])
 channel = ephys_data_manager.get_channel(channel_name)
 channel_worker = ChannelWorker(channel)
 channel_worker.plot_spectrogram(plot_events=True)   

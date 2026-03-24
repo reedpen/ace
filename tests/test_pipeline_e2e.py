@@ -3,7 +3,7 @@ from pathlib import Path
 import os
 import numpy as np
 import h5py
-
+from typing import Any
 from ace_neuro.pipelines.miniscope import MiniscopePipeline
 from ace_neuro.shared.experiment_data_manager import ExperimentDataManager
 from ace_neuro.miniscope.miniscope_data_manager import MiniscopeDataManager
@@ -16,7 +16,7 @@ MINISCOPE_DIR = TEST_DATA_DIR / "UCLA and Neuralynx" / "miniscope"
 EPHYS_DIR = TEST_DATA_DIR / "UCLA and Neuralynx" / "ephys"
 
 # We assume a mock experiment parameters CSV will exist in the tests directory or we can inject parameters
-MOCK_ANALYSIS_PARAMS = {
+MOCK_ANALYSIS_PARAMS: dict[str, Any] = {
     'crop': False,
     'detrend_method': 'median',
     'df_over_f': True,
@@ -72,7 +72,8 @@ class TestEndToEndPipeline:
                 'id': 'test_mouse',
                 'calcium imaging directory': MINISCOPE_DIR
             }
-            dm.filenames = filenames
+            if hasattr(dm, 'filenames'):
+                dm.filenames = filenames
             # Import data manually
             dm.load_attributes([MINISCOPE_DIR / str(f) for f in filenames])
             return dm

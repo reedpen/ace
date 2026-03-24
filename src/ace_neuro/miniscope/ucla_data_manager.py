@@ -79,8 +79,12 @@ class UCLADataManager(MiniscopeDataManager):
         ts_array = np.divide(np.asarray(time_stamps), 1000)  # convert from ms to s
         return ts_array, frame_numbers
 
-    def _get_miniscope_events(self) -> Dict[str, Union[List[str], np.ndarray]]:
+    def _get_miniscope_events(self) -> Dict[str, Union[List[Any], np.ndarray]]:
         """Import calcium imaging experiment events."""
+        if self.metadata is None or 'calcium imaging directory' not in self.metadata:
+            print("Warning: Metadata or calcium imaging directory missing. Cannot load events.")
+            return {'timestamps': [], 'labels': []}
+
         miniscope_events_filepaths = PathFinder.find(str(self.metadata['calcium imaging directory']), '.csv', 'notes')
         
         if miniscope_events_filepaths is not None and len(miniscope_events_filepaths) == 1:
@@ -157,8 +161,11 @@ class UCLADataManager(MiniscopeDataManager):
             flippedidx_TTL_gap = np.flip(idx_TTL_gap)
             for gap_idx in flippedidx_TTL_gap:
                 gap_duration = dtCaIm[gap_idx]
-                expected_frame_duration = 1.0 / self.metadata['frameRate']
-                gap_length = round(gap_duration / expected_frame_duration)
+                if self.metadata is not None and 'frameRate' in self.metadata:
+                    expected_frame_duration = 1.0 / float(self.metadata['frameRate'])
+                else:
+                    expected_frame_duration = 0.0333  # default 30 fps
+                gap_length = int(np.round(gap_duration / expected_frame_duration))
                 print(f"{gap_length - 1} TTL event(s) missing between indices {gap_idx} and {gap_idx + 1}.")
                 
                 # Interpolate estimated event times

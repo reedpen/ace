@@ -6,7 +6,7 @@ Manages the import of RHS2116 .raw ephys data (AC/DC/Clock) using neo.rawio.
 import os
 from pathlib import Path
 import numpy as np
-from neo.rawio import RawBinarySignalRawIO
+from neo.rawio import RawBinarySignalRawIO  # type: ignore
 from ace_neuro.ephys.ephys_data_manager import EphysDataManager
 from ace_neuro.ephys.channel import Channel
 from typing import List, Optional, Union, Any, Dict, TYPE_CHECKING
@@ -83,7 +83,7 @@ class RHS2116DataManager(EphysDataManager):
 
     def process_ephys_block_to_channels(
         self, 
-        channels: Optional[List[Union[str, int]]] = None, 
+        channels: Optional[List[str]] = None, 
         remove_artifacts: bool = False
     ) -> None:
         """Process RawBinarySignalRawIO data into Channel objects natively."""

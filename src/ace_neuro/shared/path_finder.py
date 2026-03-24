@@ -6,7 +6,7 @@ class PathFinder:
     
     @staticmethod
     def find(
-        directory: Union[str, Path] = None, 
+        directory: Optional[Union[str, Path]] = None,
         suffix: Optional[Union[str, List[str], Tuple[str, ...]]] = None, 
         prefix: Optional[Union[str, List[str], Tuple[str, ...]]] = None, 
         file_and_directory: bool = False
