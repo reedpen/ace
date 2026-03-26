@@ -1,6 +1,5 @@
 import argparse
 import sys
-import traceback
 import typing
 from pathlib import Path
 from typing import Any
@@ -16,6 +15,7 @@ from ace_neuro.multimodal.phase_utils import ephys_phase_ca_events, miniscope_ph
 from ace_neuro.pipelines.ephys import EphysPipeline
 from ace_neuro.pipelines.miniscope import MiniscopePipeline
 from ace_neuro.shared.config_utils import load_analysis_params
+from ace_neuro.shared.exceptions import AceNeuroError, PipelineExecutionError, print_cli_error
 
 
 class MultimodalPipeline:
@@ -164,75 +164,105 @@ class MultimodalPipeline:
         self.phase_bin_edges_miniscope = None
 
         self.ephys_pipeline = EphysPipeline()
-        self.ephys_pipeline.run(
-            line_num=line_num,
-            project_path=project_path,
-            data_path=data_path,
-            channel_name=channel_name,
-            remove_artifacts=remove_artifacts,
-            filter_type=filter_type,
-            filter_range=filter_range,
-            plot_channel=plot_channel,
-            plot_spectrogram=plot_spectrogram,
-            plot_phases=plot_phases,
-            logging_level=logging_level,
-            headless=headless
-        )
+        try:
+            self.ephys_pipeline.run(
+                line_num=line_num,
+                project_path=project_path,
+                data_path=data_path,
+                channel_name=channel_name,
+                remove_artifacts=remove_artifacts,
+                filter_type=filter_type,
+                filter_range=filter_range,
+                plot_channel=plot_channel,
+                plot_spectrogram=plot_spectrogram,
+                plot_phases=plot_phases,
+                logging_level=logging_level,
+                headless=headless,
+            )
+        except Exception as e:
+            raise PipelineExecutionError(
+                "Multimodal run failed during ephys sub-pipeline.",
+                stage="run_ephys_pipeline",
+                line_num=line_num,
+                project_path=project_path,
+                data_path=data_path,
+                hint="Check ephys input paths and channel parameters before multimodal sync.",
+            ) from e
 
         self.miniscope_pipeline = MiniscopePipeline()
-        self.miniscope_pipeline.run(
-            line_num=line_num,
-            project_path=project_path,
-            data_path=data_path,
-            filenames=miniscope_filenames,
-            crop=crop,
-            crop_coords=crop_coords,
-            detrend_method=detrend_method,
-            df_over_f=df_over_f,
-            secs_window=secs_window,
-            quantile_min=quantile_min,
-            df_over_f_method=df_over_f_method,
-            parallel=parallel,
-            n_processes=n_processes,
-            apply_motion_correction=apply_motion_correction,
-            inspect_motion_correction=inspect_motion_correction,
-            plot_params=plot_params,
-            run_CNMFE=run_CNMFE,
-            save_estimates=save_estimates,
-            save_CNMFE_estimates_filename=save_CNMFE_estimates_filename,
-            save_CNMFE_params=save_CNMFE_params,
-            remove_components_with_gui=remove_components_with_gui,
-            find_calcium_events=find_calcium_events,
-            derivative_for_estimates=derivative_for_estimates,
-            event_height=event_height,
-            compute_miniscope_phase=compute_miniscope_phase,
-            filter_miniscope_data=filter_miniscope_data,
-            n=n,
-            cut=cut,
-            ftype=ftype,
-            btype=btype,
-            inline=inline,
-            compute_miniscope_spectrogram=compute_miniscope_spectrogram,
-            window_length=window_length,
-            window_step=window_step,
-            freq_lims=freq_lims,
-            time_bandwidth=time_bandwidth,
-            headless=headless
-        )
+        try:
+            self.miniscope_pipeline.run(
+                line_num=line_num,
+                project_path=project_path,
+                data_path=data_path,
+                filenames=miniscope_filenames,
+                crop=crop,
+                crop_coords=crop_coords,
+                detrend_method=detrend_method,
+                df_over_f=df_over_f,
+                secs_window=secs_window,
+                quantile_min=quantile_min,
+                df_over_f_method=df_over_f_method,
+                parallel=parallel,
+                n_processes=n_processes,
+                apply_motion_correction=apply_motion_correction,
+                inspect_motion_correction=inspect_motion_correction,
+                plot_params=plot_params,
+                run_CNMFE=run_CNMFE,
+                save_estimates=save_estimates,
+                save_CNMFE_estimates_filename=save_CNMFE_estimates_filename,
+                save_CNMFE_params=save_CNMFE_params,
+                remove_components_with_gui=remove_components_with_gui,
+                find_calcium_events=find_calcium_events,
+                derivative_for_estimates=derivative_for_estimates,
+                event_height=event_height,
+                compute_miniscope_phase=compute_miniscope_phase,
+                filter_miniscope_data=filter_miniscope_data,
+                n=n,
+                cut=cut,
+                ftype=ftype,
+                btype=btype,
+                inline=inline,
+                compute_miniscope_spectrogram=compute_miniscope_spectrogram,
+                window_length=window_length,
+                window_step=window_step,
+                freq_lims=freq_lims,
+                time_bandwidth=time_bandwidth,
+                headless=headless,
+            )
+        except Exception as e:
+            raise PipelineExecutionError(
+                "Multimodal run failed during miniscope sub-pipeline.",
+                stage="run_miniscope_pipeline",
+                line_num=line_num,
+                project_path=project_path,
+                data_path=data_path,
+                hint="Check miniscope inputs and CNMF-E parameters before multimodal sync.",
+            ) from e
 
         channel_object = self.ephys_pipeline.ephys_data_manager.get_channel(channel_name)
         frame_rate = self.miniscope_pipeline.miniscope_data_manager.fr
         ca_events_idx = self.miniscope_pipeline.miniscope_data_manager.ca_events_idx
         miniscope_phases = self.miniscope_pipeline.miniscope_data_manager.miniscope_phases
 
-        t_ca_im, low_confidence_periods, channel_object, miniscope_dm = sync_neuralynx_miniscope_timestamps(
-            channel_object,
-            self.miniscope_pipeline.miniscope_data_manager,
-            self.ephys_pipeline.ephys_data_manager,
-            delete_TTLs=delete_TTLs,
-            fix_TTL_gaps=fix_TTL_gaps,
-            only_experiment_events=only_experiment_events
-        )
+        try:
+            t_ca_im, low_confidence_periods, channel_object, miniscope_dm = sync_neuralynx_miniscope_timestamps(
+                channel_object,
+                self.miniscope_pipeline.miniscope_data_manager,
+                self.ephys_pipeline.ephys_data_manager,
+                delete_TTLs=delete_TTLs,
+                fix_TTL_gaps=fix_TTL_gaps,
+                only_experiment_events=only_experiment_events,
+            )
+        except Exception as e:
+            raise PipelineExecutionError(
+                "Timestamp synchronization failed in multimodal pipeline.",
+                stage="sync_timestamps",
+                line_num=line_num,
+                project_path=project_path,
+                data_path=data_path,
+                hint="Validate TTL events and ensure both pipelines produced aligned timing metadata.",
+            ) from e
 
         print("\nSuccess! Setting changed variables.")
         self.miniscope_pipeline.miniscope_data_manager = miniscope_dm
@@ -241,9 +271,23 @@ class MultimodalPipeline:
         self.t_ca_im = t_ca_im
         self.low_confidence_periods = low_confidence_periods
 
-        ephys_idx_all_TTL_events, ephys_idx_ca_events = find_ephys_idx_of_TTL_events(
-            t_ca_im, channel_object, frame_rate, all_TTL_events=all_TTL_events, ca_events_idx=ca_events_idx if ca_events else None
-        )
+        try:
+            ephys_idx_all_TTL_events, ephys_idx_ca_events = find_ephys_idx_of_TTL_events(
+                t_ca_im,
+                channel_object,
+                frame_rate,
+                all_TTL_events=all_TTL_events,
+                ca_events_idx=ca_events_idx if ca_events else None,
+            )
+        except Exception as e:
+            raise PipelineExecutionError(
+                "Failed to map TTL events into ephys indices.",
+                stage="map_ttl_to_ephys_indices",
+                line_num=line_num,
+                project_path=project_path,
+                data_path=data_path,
+                hint="Check frame-rate metadata and TTL event quality.",
+            ) from e
         self.ephys_idx_all_TTL_events = ephys_idx_all_TTL_events
         self.ephys_idx_ca_events = ephys_idx_ca_events
 
@@ -251,8 +295,18 @@ class MultimodalPipeline:
             self.ca_frame_num_of_ephys_idx = find_ca_movie_frame_num_of_ephys_idx(channel_object, ephys_idx_all_TTL_events)
 
         if ephys_idx_ca_events is not None:
-            self.ca_events_phases_ephys = ephys_phase_ca_events(ephys_idx_ca_events, channel_object, neurons='all')
-            self.ca_events_phases_miniscope = miniscope_phase_ca_events(ca_events_idx, miniscope_phases, neurons='all')
+            try:
+                self.ca_events_phases_ephys = ephys_phase_ca_events(ephys_idx_ca_events, channel_object, neurons='all')
+                self.ca_events_phases_miniscope = miniscope_phase_ca_events(ca_events_idx, miniscope_phases, neurons='all')
+            except Exception as e:
+                raise PipelineExecutionError(
+                    "Failed to compute event-locked phases.",
+                    stage="compute_phase_locked_events",
+                    line_num=line_num,
+                    project_path=project_path,
+                    data_path=data_path,
+                    hint="Ensure phase arrays and calcium event indices are valid and non-empty.",
+                ) from e
 
         hist1, bin_edges1 = None, None
         hist2, bin_edges2 = None, None
@@ -379,8 +433,8 @@ Examples:
     import typing
     try:
         api.run(**typing.cast(dict[str, Any], run_params))
-    except Exception:
+    except (AceNeuroError, FileNotFoundError, ValueError) as e:
+        print_cli_error(e, include_cause=args.headless)
         if args.headless:
-            traceback.print_exc()
             sys.exit(1)
         raise

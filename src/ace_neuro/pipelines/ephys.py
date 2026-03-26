@@ -12,7 +12,12 @@ import argparse
 import sys
 import matplotlib
 import tkinter
-import traceback
+from ace_neuro.shared.exceptions import (
+    AceNeuroError,
+    DataNotFoundError,
+    PipelineExecutionError,
+    print_cli_error,
+)
 
 
 
@@ -88,46 +93,128 @@ class EphysPipeline:
         # Set the filter boolean based on if filter_type is None
         filter_bool = True if filter_type is not None else False
 
-        experiment_data_manager = ExperimentDataManager(
-            line_num, 
-            project_path=project_path,
-            data_path=data_path,
-            logging_level=logging_level
-        )
+        try:
+            experiment_data_manager = ExperimentDataManager(
+                line_num,
+                project_path=project_path,
+                data_path=data_path,
+                logging_level=logging_level,
+            )
+        except FileNotFoundError as e:
+            raise DataNotFoundError(
+                "Project metadata files were not found for ephys run.",
+                stage="load_experiment_metadata",
+                line_num=line_num,
+                project_path=project_path,
+                data_path=data_path,
+                hint="Ensure project_path points to a directory containing experiments.csv.",
+            ) from e
+        except Exception as e:
+            raise PipelineExecutionError(
+                "Failed to initialize ExperimentDataManager for ephys run.",
+                stage="load_experiment_metadata",
+                line_num=line_num,
+                project_path=project_path,
+                data_path=data_path,
+                hint="Check metadata formatting and path configuration.",
+            ) from e
 
         # Extract the one relevant piece of information that EphysDataManager needs from metadata--the path to the ephys directory
         ephys_directory = experiment_data_manager.get_ephys_directory()
         
         # Verify we downloaded the Ephys Data
         experiments_csv = experiment_data_manager.project_path / "experiments.csv"
-        file_downloader.verify_file_by_line(
-            line_num=line_num, 
-            csv_path=experiments_csv, 
-            do_type="ephys",
-            base_file_path=experiment_data_manager.data_path
-        )
+        try:
+            file_downloader.verify_file_by_line(
+                line_num=line_num,
+                csv_path=experiments_csv,
+                do_type="ephys",
+                base_file_path=experiment_data_manager.data_path,
+            )
+        except Exception as e:
+            raise PipelineExecutionError(
+                "Ephys data verification failed.",
+                stage="verify_ephys_data",
+                line_num=line_num,
+                project_path=project_path,
+                data_path=data_path,
+                hint="Confirm ephys files are present and accessible from metadata paths.",
+            ) from e
 
         if ephys_directory is None:
              raise ValueError("Ephys directory could not be determined from experiment metadata.")
 
         # Create instance of EphysDataManager, process the block into channels
-        self.ephys_data_manager = EphysDataManager.create(ephys_directory=ephys_directory, auto_import_ephys_block=True, auto_process_block=False, auto_compute_phases=False)
-        self.ephys_data_manager.process_ephys_block_to_channels(remove_artifacts=remove_artifacts, channels=[channel_name])
+        try:
+            self.ephys_data_manager = EphysDataManager.create(
+                ephys_directory=ephys_directory,
+                auto_import_ephys_block=True,
+                auto_process_block=False,
+                auto_compute_phases=False,
+            )
+            self.ephys_data_manager.process_ephys_block_to_channels(
+                remove_artifacts=remove_artifacts,
+                channels=[channel_name],
+            )
+        except Exception as e:
+            raise PipelineExecutionError(
+                "Failed to import/process ephys block into channels.",
+                stage="process_ephys_block",
+                line_num=line_num,
+                project_path=project_path,
+                data_path=data_path,
+                hint="Verify ephys channel metadata and raw recording format compatibility.",
+            ) from e
 
         logger.debug(self.ephys_data_manager.channels)
 
         # If filter_type is not None, filter the signal and add it to ephys_data_manager.channels[channel_name].signal_filtered
         if filter_bool:
             print(f'Filtering ephys data with filter type "{filter_type}" and cut {filter_range}')
-            self.ephys_data_manager.filter_ephys(channel_name, ftype=str(filter_type), cut=filter_range, replace_signal=False)
+            try:
+                self.ephys_data_manager.filter_ephys(
+                    channel_name,
+                    ftype=str(filter_type),
+                    cut=filter_range,
+                    replace_signal=False,
+                )
+            except Exception as e:
+                raise PipelineExecutionError(
+                    "Ephys filtering failed.",
+                    stage="filter_ephys",
+                    line_num=line_num,
+                    project_path=project_path,
+                    data_path=data_path,
+                    hint="Check filter_type/filter_range for valid values.",
+                ) from e
         
         if compute_phases:
             # Compute phases after filtering
-            self.ephys_data_manager.compute_phases_all_channels()
+            try:
+                self.ephys_data_manager.compute_phases_all_channels()
+            except Exception as e:
+                raise PipelineExecutionError(
+                    "Phase computation failed for ephys data.",
+                    stage="compute_phases",
+                    line_num=line_num,
+                    project_path=project_path,
+                    data_path=data_path,
+                    hint="Ensure filtered channel data is available before computing phases.",
+                ) from e
 
         # Extract correct channel and visualize
         logger.info(f"Visualizing channel: {channel_name}")
-        channel = self.ephys_data_manager.get_channel(channel_name)
+        try:
+            channel = self.ephys_data_manager.get_channel(channel_name)
+        except Exception as e:
+            raise PipelineExecutionError(
+                f"Could not load requested channel '{channel_name}'.",
+                stage="get_channel",
+                line_num=line_num,
+                project_path=project_path,
+                data_path=data_path,
+                hint="Confirm channel_name appears in experiment metadata and imported channels.",
+            ) from e
         channel_worker = ChannelWorker(channel)
         
 
@@ -249,8 +336,8 @@ Examples:
     e = EphysPipeline()
     try:
         e.run(**run_params)
-    except Exception:
+    except (AceNeuroError, FileNotFoundError, ValueError) as e:
+        print_cli_error(e, include_cause=args.headless)
         if args.headless:
-            traceback.print_exc()
             sys.exit(1)
         raise
