@@ -96,7 +96,26 @@ ace_neuro = ["py.typed", "shared/metadata_templates/*.csv"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short --strict-markers"
+markers = [
+    "slow: full Miniscope CNMF-E pipeline on sample data (excluded from default CI)",
+    "integration: heavier integration-level tests",
+]
+
+# ---------------------------------------------------------------------------
+# Coverage (pytest-cov / coverage.py)
+# ---------------------------------------------------------------------------
+[tool.coverage.run]
+branch = true
+source = ["src/ace_neuro"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
 
 
 # ---------------------------------------------------------------------------

@@ -164,6 +164,25 @@ mkdocs serve
 Check the `examples/` directory for demonstration scripts:
 *   **[explicit_paths_demo.py](examples/explicit_paths_demo.py)**: Shows how to run pipelines using the explicit path API.
 
+## Development and testing
+
+### Test fixtures
+
+- **`tests/data/sample_recording/`** — Small committed recordings used by **autodetect** tests (`MiniscopeDataManager.create` / `EphysDataManager.create` routing) and by the **slow** Miniscope CNMF-E end-to-end test. A normal clone includes this tree; do not remove it if you want those tests to run.
+- **Regenerating fixtures** — If you have the full raw `sample data/` folders at the project root (not required for most contributors), run [`scripts/create_test_data.py`](scripts/create_test_data.py) to rebuild truncated UCLA miniscope + Neuralynx ephys fixtures from those sources.
+
+### Running tests
+
+```bash
+pip install -e ".[dev]"
+# Default: fast tests (excludes slow CNMF-E full pipeline)
+pytest tests/ -m "not slow"
+# Full suite including Miniscope CNMF-E e2e on sample data
+pytest tests/
+```
+
+Continuous integration runs the fast subset by default (`-m "not slow"`). The full **slow** Miniscope CNMF-E test runs on pushes to `main` / `formal-release` and on `workflow_dispatch` (see [`.github/workflows/python-app.yml`](.github/workflows/python-app.yml)).
+
 ## License
 
 This project is licensed under the GNU General Public License v2.0 (or later) - see the LICENSE file for details.

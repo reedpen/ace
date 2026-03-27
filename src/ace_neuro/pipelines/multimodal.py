@@ -16,6 +16,12 @@ from ace_neuro.pipelines.ephys import EphysPipeline
 from ace_neuro.pipelines.miniscope import MiniscopePipeline
 from ace_neuro.shared.config_utils import load_analysis_params
 from ace_neuro.shared.exceptions import AceNeuroError, PipelineExecutionError, print_cli_error
+from ace_neuro.shared.cli_utils import (
+    apply_headless_policy,
+    build_run_params,
+    run_allowed_keys,
+    validate_run_params,
+)
 
 
 class MultimodalPipeline:
@@ -351,8 +357,7 @@ Examples:
     args = parser.parse_args()
 
     # Default parameters
-    run_params = {
-        'line_num': args.line_num,
+    defaults = {
         # ephys parameters
         'channel_name': 'PFCLFPvsCBEEG',
         'remove_artifacts': False,
@@ -408,31 +413,21 @@ Examples:
         'time_range': None
     }
 
-    # Override defaults with parameters from analysis_parameters.csv
-    try:
-        csv_params = load_analysis_params(
-            args.line_num,
-            project_path=Path(args.project_path) if args.project_path else None
-        )
-        run_params.update(csv_params)
-    except FileNotFoundError:
-        print("No analysis_parameters.csv found. Using default parameters.", flush=True)
-
-    # CLI overrides
-    if args.project_path:
-        run_params['project_path'] = args.project_path
-    if args.data_path:
-        run_params['data_path'] = args.data_path
-    if args.headless:
-        run_params['headless'] = True
-
-    # Initialize phase variables to None to avoid unbound name errors
-    # ca_events_phases_ephys and ca_events_phases_miniscope are defined in run()
+    run_params = build_run_params(
+        defaults=defaults,
+        allowed_keys=run_allowed_keys(MultimodalPipeline.run),
+        line_num=args.line_num,
+        project_path=args.project_path,
+        data_path=args.data_path,
+        headless=args.headless,
+        csv_loader=load_analysis_params,
+    )
+    apply_headless_policy(pipeline_name="multimodal", run_params=run_params)
+    validate_run_params(pipeline_name="multimodal", run_params=run_params)
 
     api = MultimodalPipeline()
-    import typing
     try:
-        api.run(**typing.cast(dict[str, Any], run_params))
+        api.run(**run_params)
     except (AceNeuroError, FileNotFoundError, ValueError) as e:
         print_cli_error(e, include_cause=args.headless)
         if args.headless:

@@ -22,6 +22,12 @@ from ace_neuro.shared.exceptions import (
     PipelineExecutionError,
     print_cli_error,
 )
+from ace_neuro.shared.cli_utils import (
+    apply_headless_policy,
+    build_run_params,
+    run_allowed_keys,
+    validate_run_params,
+)
 
 
 
@@ -310,8 +316,7 @@ Examples:
     args = parser.parse_args()
     
     # Default parameters
-    run_params = {
-        'line_num': args.line_num,
+    defaults = {
         'filenames': ['0.avi'],
         # Preprocessing
         'crop': True,
@@ -349,69 +354,22 @@ Examples:
         'time_bandwidth': 2
     }
     
-    # Load analysis parameters from CSV
     from ace_neuro.shared.config_utils import load_analysis_params
-    print(f"Loading analysis parameters for line {args.line_num}...", flush=True)
-    try:
-        csv_params = load_analysis_params(
-            args.line_num, 
-            project_path=Path(args.project_path) if args.project_path else None
-        )
-        run_params.update(csv_params)
-    except FileNotFoundError as e:
-        print(f"Warning: {e}", flush=True)
-        print("Proceeding with default parameters.", flush=True)
-    
-    # CLI overrides
-    if args.project_path:
-        run_params['project_path'] = args.project_path
-    if args.data_path:
-        run_params['data_path'] = args.data_path
-    if args.headless:
-        run_params['headless'] = True
-        
+    run_params = build_run_params(
+        defaults=defaults,
+        allowed_keys=run_allowed_keys(MiniscopePipeline.run),
+        line_num=args.line_num,
+        project_path=args.project_path,
+        data_path=args.data_path,
+        headless=args.headless,
+        csv_loader=load_analysis_params,
+    )
+    apply_headless_policy(pipeline_name="miniscope", run_params=run_params)
+    validate_run_params(pipeline_name="miniscope", run_params=run_params)
+
     api = MiniscopePipeline()
-    import typing
     try:
-        api.run(
-            line_num=typing.cast(Any, run_params['line_num']),
-            project_path=typing.cast(Any, run_params['project_path']),
-            data_path=typing.cast(Any, run_params['data_path']),
-            filenames=typing.cast(Any, run_params['filenames']),
-            crop=typing.cast(Any, run_params['crop']),
-            crop_coords=typing.cast(Any, run_params.get('crop_coords')),
-            detrend_method=typing.cast(Any, run_params['detrend_method']),
-            df_over_f=typing.cast(Any, run_params['df_over_f']),
-            secs_window=typing.cast(Any, run_params['secs_window']),
-            quantile_min=typing.cast(Any, run_params['quantile_min']),
-            df_over_f_method=typing.cast(Any, run_params['df_over_f_method']),
-            parallel=typing.cast(Any, run_params['parallel']),
-            n_processes=typing.cast(Any, run_params['n_processes']),
-            apply_motion_correction=typing.cast(Any, run_params['apply_motion_correction']),
-            inspect_motion_correction=typing.cast(Any, run_params['inspect_motion_correction']),
-            plot_params=typing.cast(Any, run_params['plot_params']),
-            run_CNMFE=typing.cast(Any, run_params['run_CNMFE']),
-            save_estimates=typing.cast(Any, run_params['save_estimates']),
-            save_CNMFE_estimates_filename=typing.cast(Any, run_params['save_CNMFE_estimates_filename']),
-            save_CNMFE_params=typing.cast(Any, run_params['save_CNMFE_params']),
-            remove_components_with_gui=typing.cast(Any, run_params['remove_components_with_gui']),
-            find_calcium_events=typing.cast(Any, run_params['find_calcium_events']),
-            derivative_for_estimates=typing.cast(Any, run_params['derivative_for_estimates']),
-            event_height=typing.cast(Any, run_params['event_height']),
-            compute_miniscope_phase=typing.cast(Any, run_params['compute_miniscope_phase']),
-            filter_miniscope_data=typing.cast(Any, run_params['filter_miniscope_data']),
-            n=typing.cast(Any, run_params['n']),
-            cut=typing.cast(Any, run_params['cut']),
-            ftype=typing.cast(Any, run_params['ftype']),
-            btype=typing.cast(Any, run_params['btype']),
-            inline=typing.cast(Any, run_params['inline']),
-            compute_miniscope_spectrogram=typing.cast(Any, run_params['compute_miniscope_spectrogram']),
-            window_length=typing.cast(Any, run_params['window_length']),
-            window_step=typing.cast(Any, run_params['window_step']),
-            freq_lims=typing.cast(Any, run_params['freq_lims']),
-            time_bandwidth=typing.cast(Any, run_params['time_bandwidth']),
-            headless=typing.cast(Any, run_params['headless'])
-        )
+        api.run(**run_params)
     except (AceNeuroError, FileNotFoundError, ValueError) as e:
         print_cli_error(e, include_cause=args.headless)
         if args.headless:

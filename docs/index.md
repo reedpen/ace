@@ -52,6 +52,13 @@ pip install -e "."
 
 ---
 
+## Tests and sample data
+
+- **`tests/data/sample_recording/`** — Committed fixtures for factory tests and the optional slow Miniscope CNMF-E end-to-end test.
+- To regenerate fixtures from a local `sample data/` tree, use `scripts/create_test_data.py` (see the [README](https://github.com/emelon8/experiment_analysis/blob/main/README.md#development-and-testing) Development and testing section).
+
+---
+
 ## API Overview
 
 ACE-neuro provides a clear, modular API optimized for both interactive use and automated scripts.

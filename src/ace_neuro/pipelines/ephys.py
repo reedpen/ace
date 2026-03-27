@@ -18,6 +18,12 @@ from ace_neuro.shared.exceptions import (
     PipelineExecutionError,
     print_cli_error,
 )
+from ace_neuro.shared.cli_utils import (
+    apply_headless_policy,
+    build_run_params,
+    run_allowed_keys,
+    validate_run_params,
+)
 
 
 
@@ -299,8 +305,7 @@ Examples:
     args = parser.parse_args()
     
     # Default parameters
-    run_params = {
-        'line_num': args.line_num,
+    defaults = {
         'channel_name': 'PFCLFPvsCBEEG',
         'remove_artifacts': False,
         'filter_type': None,
@@ -312,26 +317,18 @@ Examples:
         'logging_level': "DEBUG"
     }
     
-    # Load analysis parameters from CSV
     from ace_neuro.shared.config_utils import load_analysis_params
-    print(f"Loading analysis parameters for line {args.line_num}...", flush=True)
-    try:
-        csv_params = load_analysis_params(
-            args.line_num, 
-            project_path=Path(args.project_path) if args.project_path else None
-        )
-        run_params.update(csv_params)
-    except FileNotFoundError as e:
-        print(f"Warning: {e}", flush=True)
-        print("Proceeding with default parameters.", flush=True)
-    
-    # CLI overrides
-    if args.project_path:
-        run_params['project_path'] = args.project_path
-    if args.data_path:
-        run_params['data_path'] = args.data_path
-    if args.headless:
-        run_params['headless'] = True
+    run_params = build_run_params(
+        defaults=defaults,
+        allowed_keys=run_allowed_keys(EphysPipeline.run),
+        line_num=args.line_num,
+        project_path=args.project_path,
+        data_path=args.data_path,
+        headless=args.headless,
+        csv_loader=load_analysis_params,
+    )
+    apply_headless_policy(pipeline_name="ephys", run_params=run_params)
+    validate_run_params(pipeline_name="ephys", run_params=run_params)
 
     e = EphysPipeline()
     try:

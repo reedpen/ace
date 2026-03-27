@@ -5,26 +5,51 @@ on:
     branches: [ "main", "formal-release" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Set up Python 3.10
       uses: actions/setup-python@v4
       with:
         python-version: "3.10"
-        
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest pytest-cov
+        pip install -e ".[dev]"
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        pip install -e .
-        
-    - name: Run tests with pytest
+
+    - name: Run tests with coverage (fast subset)
       run: |
-        pytest tests/ -v
+        pytest tests/ -v -m "not slow" \
+          --cov=ace_neuro \
+          --cov-report=term-missing \
+          --cov-report=xml
+
+  e2e-slow:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/formal-release'))
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+    - name: Run slow integration tests (Miniscope CNMF-E e2e)
+      run: |
+        pytest tests/ -v -m "slow"

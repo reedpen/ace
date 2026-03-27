@@ -1,7 +1,9 @@
+from unittest.mock import patch
+
 import pytest
-from pathlib import Path
-from unittest.mock import patch, MagicMock
+
 from ace_neuro.shared.experiment_data_manager import ExperimentDataManager
+
 
 class TestExperimentDataManager:
     @patch("ace_neuro.shared.experiment_data_manager.CSVWorker")
@@ -30,7 +32,7 @@ class TestExperimentDataManager:
             line_num=1, project_path=tmp_path,
             auto_import_metadata=False, auto_import_analysis_params=False
         )
-        
+
         with pytest.raises(FileNotFoundError, match="Did you forget to initialize your project data folder"):
             manager.import_metadata()
 
