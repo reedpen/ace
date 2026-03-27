@@ -15,14 +15,19 @@ mkdocs serve
 
 Open the URL MkDocs prints (usually `http://127.0.0.1:8000`).
 
-## GitHub Pages (this repository)
+## Read the Docs (hosted site)
 
-The workflow `.github/workflows/mkdocs-gh-pages.yml` in the repository runs on pushes to `main` and `formal-release`. It installs the package with docs extras, syncs notebooks, and runs `mkdocs gh-deploy --force`, which pushes the built site to the **`gh-pages`** branch.
+Documentation is built and published by [Read the Docs](https://readthedocs.org/) using [`.readthedocs.yaml`](https://docs.readthedocs.io/en/stable/config-file/v2.html) at the repository root.
 
-**Repository settings:** **Settings → Pages → Build and deployment** — source should be **Deploy from a branch**, branch **`gh-pages`**, folder **`/(root)`**. (If you use a different branch or folder, adjust accordingly.)
+On each build, RTD:
 
-After the first successful workflow run, the site is available at  
-`https://<user-or-org>.github.io/<repo>/` (unless you use a custom domain).
+1. Installs the package with docs extras (`pip install -e ".[docs]"`).
+2. Runs `scripts/sync_notebooks_for_docs.sh` so `docs/notebooks/` matches `notebooks/`.
+3. Runs `mkdocs build` with `mkdocs.yml`.
+
+**Project setup (dashboard):** import the GitHub repository in Read the Docs, connect the private repo if needed ([private repositories](https://docs.readthedocs.com/platform/latest/guides/creating-project-private-repository.html)), and point the default branch at your main docs branch. The canonical docs URL is configured in `mkdocs.yml` as `site_url` (currently `https://ace-neuro.readthedocs.io/en/latest/`). If your RTD project slug differs, update `site_url` and any hardcoded links accordingly.
+
+**CI:** GitHub Actions runs `mkdocs build` on pushes and pull requests (see `.github/workflows/docs-build.yml`) without deploying; hosting is RTD-only.
 
 ## Updating tutorials
 

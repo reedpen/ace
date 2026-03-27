@@ -151,7 +151,7 @@ For detailed documentation, see the module-specific READMEs in `ace_neuro/minisc
 ## Documentation
 
 A comprehensive documentation site, including full API references and guides, is available at:
-**[Link to your GitHub Pages site - e.g., https://emelon8.github.io/experiment_analysis/]**
+**[https://ace-neuro.readthedocs.io/en/latest/](https://ace-neuro.readthedocs.io/en/latest/)**
 
 To view the documentation locally:
 ```bash

@@ -75,7 +75,7 @@ all = [
 
 [project.urls]
 Homepage = "https://github.com/emelon8/experiment_analysis"
-Documentation = "https://emelon8.github.io/experiment_analysis/"
+Documentation = "https://ace-neuro.readthedocs.io/en/latest/"
 Repository = "https://github.com/emelon8/experiment_analysis"
 "Bug Tracker" = "https://github.com/emelon8/experiment_analysis/issues"
 

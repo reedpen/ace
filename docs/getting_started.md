@@ -118,9 +118,9 @@ Step-by-step notebooks stress-test this layout: they **assert both CSVs exist** 
 
 | Topic | In the docs site | Notebook source in repo |
 |-------|------------------|-------------------------|
-| Miniscope | [Tutorial](https://emelon8.github.io/experiment_analysis/notebooks/miniscope_pipeline_tutorial/) | `notebooks/miniscope_pipeline_tutorial.ipynb` |
-| Ephys | [Tutorial](https://emelon8.github.io/experiment_analysis/notebooks/ephys_pipeline_tutorial/) | `notebooks/ephys_pipeline_tutorial.ipynb` |
-| Multimodal | [Tutorial](https://emelon8.github.io/experiment_analysis/notebooks/multimodal_alignment_tutorial/) | `notebooks/multimodal_alignment_tutorial.ipynb` |
+| Miniscope | [Tutorial](https://ace-neuro.readthedocs.io/en/latest/notebooks/miniscope_pipeline_tutorial/) | `notebooks/miniscope_pipeline_tutorial.ipynb` |
+| Ephys | [Tutorial](https://ace-neuro.readthedocs.io/en/latest/notebooks/ephys_pipeline_tutorial/) | `notebooks/ephys_pipeline_tutorial.ipynb` |
+| Multimodal | [Tutorial](https://ace-neuro.readthedocs.io/en/latest/notebooks/multimodal_alignment_tutorial/) | `notebooks/multimodal_alignment_tutorial.ipynb` |
 
 ---
 

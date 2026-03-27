@@ -57,7 +57,7 @@ Hands-on walkthrough of **electrophysiology** loading and analysis: metadata fro
 
 **Audience:** You have a project directory with `experiments.csv` and `analysis_parameters.csv`, plus Neuralynx (or compatible) data under a shared raw-data root.
 
-**Published docs:** after syncing notebooks ([contributing](https://emelon8.github.io/experiment_analysis/contributing/)), these render under the site *Tutorials* tab.
+**Published docs:** after syncing notebooks ([contributing](https://ace-neuro.readthedocs.io/en/latest/getting_started/)), these render under the site *Tutorials* tab.
 """,
         ),
         (
@@ -147,7 +147,7 @@ print("ephys directory (resolved):", edm.get_ephys_directory())
             "md",
             """### Step 1 — Verify raw data (`file_downloader.verify_file_by_line`)
 
-Mirrors [EphysPipeline.run](https://emelon8.github.io/experiment_analysis/api/pipelines/). Ensures ephys files for this `line_num` exist under `data_path`.
+Mirrors [EphysPipeline.run](https://ace-neuro.readthedocs.io/en/latest/api/pipelines/). Ensures ephys files for this `line_num` exist under `data_path`.
 """,
         ),
         (

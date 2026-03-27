@@ -1,6 +1,6 @@
 site_name: ACE-neuro
 site_description: Analysis of Calcium Imaging and Ephys — integrated pipelines for miniscope calcium imaging and electrophysiology data.
-site_url: https://emelon8.github.io/experiment_analysis/
+site_url: https://ace-neuro.readthedocs.io/en/latest/
 site_author: "Reed Bjork"
 
 theme:

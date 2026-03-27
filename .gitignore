@@ -23,9 +23,13 @@ src/ace_neuro/shared/box_credentials.py
 # MkDocs — build output only (source lives in docs/)
 site/
 .cache/
+scripts/
 
 # IDE / OS
 .DS_Store
 .agent/
 .vscode/
 .idea/
+
+# Tests (temporarily untracked due to size)
+tests/

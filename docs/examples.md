@@ -41,7 +41,7 @@ The pipeline uses `ace_neuro/shared/file_downloader.py` to check for data locall
 
 ## 4. Interactive Tutorials
 
-Notebooks emphasize **`project_path`** (CSVs) vs **`data_path`** (raw data) before running pipelines. They render on the docs site via **mkdocs-jupyter** ([Miniscope](https://emelon8.github.io/experiment_analysis/notebooks/miniscope_pipeline_tutorial/), [Ephys](https://emelon8.github.io/experiment_analysis/notebooks/ephys_pipeline_tutorial/), [Multimodal](https://emelon8.github.io/experiment_analysis/notebooks/multimodal_alignment_tutorial/)).
+Notebooks emphasize **`project_path`** (CSVs) vs **`data_path`** (raw data) before running pipelines. They render on the docs site via **mkdocs-jupyter** ([Miniscope](https://ace-neuro.readthedocs.io/en/latest/notebooks/miniscope_pipeline_tutorial/), [Ephys](https://ace-neuro.readthedocs.io/en/latest/notebooks/ephys_pipeline_tutorial/), [Multimodal](https://ace-neuro.readthedocs.io/en/latest/notebooks/multimodal_alignment_tutorial/)).
 
 | Notebook | In-repo after `scripts/sync_notebooks_for_docs.sh` |
 |----------|-----------------------------------------------------|

@@ -41,7 +41,7 @@ The pipeline uses `ace_neuro/shared/file_downloader.py` to check for data locall
 
 Jupyter notebooks spell out **`project_path`** (directory containing **`experiments.csv`** and **`analysis_parameters.csv`**) and **`data_path`** (raw recordings), with validation cells before pipelines run.
 
-- **Published (MkDocs):** [Miniscope](https://emelon8.github.io/experiment_analysis/notebooks/miniscope_pipeline_tutorial/), [Ephys](https://emelon8.github.io/experiment_analysis/notebooks/ephys_pipeline_tutorial/), [Multimodal](https://emelon8.github.io/experiment_analysis/notebooks/multimodal_alignment_tutorial/)
+- **Published (MkDocs):** [Miniscope](https://ace-neuro.readthedocs.io/en/latest/notebooks/miniscope_pipeline_tutorial/), [Ephys](https://ace-neuro.readthedocs.io/en/latest/notebooks/ephys_pipeline_tutorial/), [Multimodal](https://ace-neuro.readthedocs.io/en/latest/notebooks/multimodal_alignment_tutorial/)
 - **Source:** [notebooks/miniscope_pipeline_tutorial.ipynb](notebooks/miniscope_pipeline_tutorial.ipynb), [notebooks/ephys_pipeline_tutorial.ipynb](notebooks/ephys_pipeline_tutorial.ipynb), [notebooks/multimodal_alignment_tutorial.ipynb](notebooks/multimodal_alignment_tutorial.ipynb)
 
 > [!TIP]
