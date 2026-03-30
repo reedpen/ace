@@ -1,10 +1,6 @@
 name: Python Application CI
 
 on:
-  push:
-    branches: [ "main", "formal-release" ]
-  pull_request:
-    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
