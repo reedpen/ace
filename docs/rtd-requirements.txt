@@ -1,0 +1,20 @@
+# Read the Docs only: same as [project] dependencies except caiman (not on PyPI for pip),
+# plus [project.optional-dependencies] docs. Keep in sync when those change.
+numpy>=1.23
+scipy>=1.9
+matplotlib>=3.5
+pandas>=1.5
+opencv-python>=4.6
+tqdm>=4.64
+h5py>=3.7
+colorcet>=3.0
+neo>=0.12
+quantities>=0.14
+joblib>=1.2
+PySimpleGUI>=4.60
+Pillow>=9.0
+mkdocs-material>=9.0
+mkdocstrings[python]>=0.24
+pymdown-extensions>=10.0
+mkdocs-jupyter>=0.24.0
+python-markdown-math>=0.8

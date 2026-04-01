@@ -97,9 +97,9 @@ classDiagram
    git clone https://github.com/emelon8/experiment_analysis.git
    cd experiment_analysis
    mamba env create -f linux_environment.yml && conda activate caiman
-   pip install -e .
+   pip install -e . --no-deps
    ```
-   CaImAn is provided by the conda env above. For a **pip-only** setup, use `pip install -e ".[caiman]"` if your index provides CaImAn; otherwise install CaImAn from [conda-forge](https://anaconda.org/conda-forge/caiman) or the [CaImAn repo](https://github.com/flatironinstitute/CaImAn) and then `pip install -e .`.
+   Use **`--no-deps`** so pip does not try to install CaImAn from PyPI (the conda env already provides it). For a full install from pip alone, install CaImAn from [conda-forge](https://anaconda.org/conda-forge/caiman) or [source](https://github.com/flatironinstitute/CaImAn), then `pip install -e .`.
 3. **Configure Paths**: Use `--project-path` CLI arguments or pass paths to `Pipeline.run()` (see below).
 
 ### Project Setup

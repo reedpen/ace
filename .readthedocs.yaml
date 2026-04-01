@@ -15,7 +15,7 @@ mkdocs:
 
 python:
   install:
-    - method: pip
-      path: .
-      extra_requirements:
-        - docs
+    # Install everything the doc build needs except CaImAn (pip cannot resolve caiman>=1.11 on PyPI).
+    # Package remains declared with caiman in pyproject.toml; use conda for CaImAn locally.
+    - pip install -r docs/rtd-requirements.txt
+    - pip install --no-deps -e .
