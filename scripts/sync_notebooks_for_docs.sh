@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# Copy tutorial notebooks from repo root into docs/ for MkDocs (mkdocs-jupyter).
+# Copy tutorial notebooks from notebooks/ into docs/notebooks/ for mkdocs-jupyter.
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-mkdir -p "${ROOT}/docs/notebooks"
-cp "${ROOT}/notebooks"/*.ipynb "${ROOT}/docs/notebooks/"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SRC="${ROOT}/notebooks"
+DST="${ROOT}/docs/notebooks"
+mkdir -p "${DST}"
+cp -f "${SRC}"/*.ipynb "${DST}/"
+echo "Synced notebooks: ${SRC} -> ${DST}"

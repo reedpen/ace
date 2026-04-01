@@ -7,6 +7,7 @@ ACE-neuro is organized into several key modules:
 - **[Pipelines](pipelines.md)**: High-level entry points for standard workflows.
 - **[Miniscope](miniscope.md)**: Tools for calcium imaging data extraction and processing.
 - **[Ephys](ephys.md)**: Multi-channel electrophysiology data management and signal processing.
+- **[Multimodal](multimodal.md)**: Cross-modal alignment and the multimodal pipeline API.
 - **[Shared](shared.md)**: Core utilities for configuration, paths, and data managers.
 
 ## Package Structure

@@ -17,12 +17,12 @@ Welcome to the Experiment Analysis pipeline! This guide will help you set up you
 Clone the repository and install the package in editable mode:
 
 ```bash
-git clone https://github.com/your-repo/experiment_analysis.git
+git clone https://github.com/emelon8/experiment_analysis.git
 cd experiment_analysis
 
 # Recommended: Use the provided environment file
 conda env create -f linux_environment.yml
-conda activate experiment_analysis
+conda activate caiman
 
 # Install the package
 pip install -e .

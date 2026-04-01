@@ -115,14 +115,14 @@ api = EphysPipeline()
 api.run(line_num=96, project_path="/path/to/project")
 ```
 
-For more details on directory structure and cloud integration, see the **[Getting Started Guide](GETTING_STARTED.md)**.
+For more details on directory structure and cloud integration, see the **[Getting Started guide on Read the Docs](https://ace-neuro.readthedocs.io/en/latest/getting_started/)** (source: [`docs/getting_started.md`](docs/getting_started.md)).
 
 ## Usage
 
 The project uses modular pipeline scripts as the primary entry points. Each pipeline loads parameters from your project's `analysis_parameters.csv` based on the experiment's line number.
 
 ### 1. Miniscope Analysis
-**Script:** `ace_neuro/miniscope/miniscope_pipeline.py`
+**Entry point:** `python -m ace_neuro.pipelines.miniscope` (implementation under `src/ace_neuro/pipelines/miniscope.py`).
 
 ```bash
 # Run analysis for experiment line 96
@@ -133,20 +133,20 @@ python -m ace_neuro.pipelines.miniscope --line-num 96 --headless
 ```
 
 ### 2. Electrophysiology Analysis
-**Script:** `ace_neuro/ephys/ephys_pipeline.py`
+**Entry point:** `python -m ace_neuro.pipelines.ephys` (implementation under `src/ace_neuro/pipelines/ephys.py`).
 
 ```bash
 python -m ace_neuro.pipelines.ephys --line-num 96
 ```
 
 ### 3. Multimodal Analysis
-**Script:** `ace_neuro/multimodal/multimodal_pipeline.py`
+**Entry point:** `python -m ace_neuro.pipelines.multimodal` (implementation under `src/ace_neuro/pipelines/multimodal.py`).
 
 ```bash
 python -m ace_neuro.pipelines.multimodal --line-num 97
 ```
 
-For detailed documentation, see the module-specific READMEs in `ace_neuro/miniscope/README.md`, `ace_neuro/ephys/README.md`, and `ace_neuro/multimodal/README.md`.
+For detailed documentation, see the user guides: [Miniscope](docs/guides/miniscope.md), [Ephys](docs/guides/ephys.md), and [Multimodal](docs/guides/multimodal.md) (also published on [Read the Docs](https://ace-neuro.readthedocs.io/en/latest/)).
 
 ## Documentation
 
@@ -181,8 +181,8 @@ pytest tests/ -m "not slow"
 pytest tests/
 ```
 
-Continuous integration runs the fast subset by default (`-m "not slow"`). The full **slow** Miniscope CNMF-E test runs on pushes to `main` / `formal-release` and on `workflow_dispatch` (see [`.github/workflows/python-app.yml`](.github/workflows/python-app.yml)).
+You can configure CI (e.g. GitHub Actions) to run `pytest tests/ -m "not slow"` on every push or PR; add a separate job or manual workflow if you want the full **slow** Miniscope CNMF-E suite on release branches.
 
 ## License
 
-This project is licensed under the GNU General Public License v2.0 (or later) - see the LICENSE file for details.
+**TODO:** Final license terms are pending discussion with lab leadership. Do not assume a specific license until this section and the packaging metadata in `pyproject.toml` are updated and a `LICENSE` file is added.

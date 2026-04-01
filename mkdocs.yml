@@ -1,7 +1,7 @@
 site_name: ACE-neuro
 site_description: Analysis of Calcium Imaging and Ephys — integrated pipelines for miniscope calcium imaging and electrophysiology data.
 site_url: https://ace-neuro.readthedocs.io/en/latest/
-site_author: "Reed Bjork"
+site_author: "Reed Pennock, Luke Richards, Eric Melonakos"
 
 theme:
   name: material
@@ -39,6 +39,8 @@ theme:
 
 
 markdown_extensions:
+  - attr_list
+  - md_in_html
   - admonition
   - pymdownx.details
   - pymdownx.superfences:
@@ -81,8 +83,10 @@ nav:
       - Multimodal Integration: guides/multimodal.md
       - Data Management: guides/data_management.md
   - API Reference:
+      - Overview: api/index.md
       - Pipelines: api/pipelines.md
       - Miniscope Components: api/miniscope.md
       - Ephys Components: api/ephys.md
+      - Multimodal: api/multimodal.md
       - Shared Utils: api/shared.md
   - Deploying the docs: deployment.md

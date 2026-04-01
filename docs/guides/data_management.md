@@ -1,6 +1,6 @@
 # Data Management in ACE-neuro
 
-ACES-neuro uses a declarative, CSV-based approach to managing experimental data. Instead of writing custom scripts for every recording session, you maintain a master list of experiments and their analysis parameters in two CSV files.
+ACE-neuro uses a declarative, CSV-based approach to managing experimental data. Instead of writing custom scripts for every recording session, you maintain a master list of experiments and their analysis parameters in two CSV files.
 
 This approach ensures that your analysis pipelines can be run in large batches without manual intervention.
 

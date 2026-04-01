@@ -8,10 +8,13 @@ name = "ace-neuro"
 version = "0.1.0"
 description = "Analysis of Calcium Imaging and Ephys — integrated pipelines for miniscope calcium imaging and electrophysiology data."
 readme = "README.md"
-license = "MIT"
+# TODO: Finalize license with lab leadership; replace text and classifiers and add LICENSE file.
+license = { text = "License undetermined — see README." }
 requires-python = ">=3.10"
 authors = [
     { name = "Reed Pennock" },
+    { name = "Luke Richards" },
+    { name = "Eric Melonakos" },
 ]
 keywords = [
     "neuroscience",
@@ -25,7 +28,6 @@ keywords = [
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",

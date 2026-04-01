@@ -1,10 +1,8 @@
 # ACE-neuro: Analysis of Calcium Imaging and Ephys
 
-<p align="center">
-  <img src="assets/uml.png" width="85%" alt="ACE-neuro Architecture">
-</p>
-
 **ACE-neuro** (Analysis of Calcium Imaging and Ephys) is an integrated, object-oriented Python library designed for the systems neuroscience community. It provides high-level pipelines for processing simultaneous 1-photon calcium imaging (Miniscope) and multi-channel electrophysiology (EEG/LFP) data.
+
+For a **class-diagram overview** of core managers and processors, see the Mermaid diagram in the [README on GitHub](https://github.com/emelon8/experiment_analysis/blob/main/README.md#system-architecture).
 
 ---
 
