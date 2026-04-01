@@ -62,6 +62,8 @@ plugins:
         python:
           paths: [src]
           options:
+            # Static analysis only: miniscope modules import CaImAn, which is not installed on Read the Docs.
+            allow_inspection: false
             docstring_style: google
             show_source: true
             show_root_heading: true

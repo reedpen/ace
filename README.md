@@ -99,6 +99,7 @@ classDiagram
    mamba env create -f linux_environment.yml && conda activate caiman
    pip install -e .
    ```
+   CaImAn is provided by the conda env above. For a **pip-only** setup, use `pip install -e ".[caiman]"` if your index provides CaImAn; otherwise install CaImAn from [conda-forge](https://anaconda.org/conda-forge/caiman) or the [CaImAn repo](https://github.com/flatironinstitute/CaImAn) and then `pip install -e .`.
 3. **Configure Paths**: Use `--project-path` CLI arguments or pass paths to `Pipeline.run()` (see below).
 
 ### Project Setup
