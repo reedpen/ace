@@ -5,6 +5,7 @@ site_author: "Reed Pennock, Luke Richards, Eric Melonakos"
 
 theme:
   name: material
+  favicon: assets/favicon.svg
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
