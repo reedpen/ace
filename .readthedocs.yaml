@@ -9,13 +9,15 @@ build:
     pre_build:
       # Mirror local/CI flow: copy notebooks into docs/ for mkdocs-jupyter
       - bash scripts/sync_notebooks_for_docs.sh
+    # python.install only accepts structured entries (requirements / method: pip). Raw "pip install ..."
+    # lines are ignored, so the default "pip install .[docs]" still ran and pulled caiman from PyPI.
+    post_install:
+      - python -m pip install --no-deps -e .
 
 mkdocs:
   configuration: mkdocs.yml
 
 python:
   install:
-    # Install everything the doc build needs except CaImAn (pip cannot resolve caiman>=1.11 on PyPI).
-    # Package remains declared with caiman in pyproject.toml; use conda for CaImAn locally.
-    - pip install -r docs/rtd-requirements.txt
-    - pip install --no-deps -e .
+    # Runtime + doc deps except caiman (see docs/rtd-requirements.txt header); package still lists caiman in pyproject.toml.
+    - requirements: docs/rtd-requirements.txt
