@@ -5,6 +5,11 @@ import csv
 import json
 import numpy as np
 from ace_neuro.miniscope.miniscope_data_manager import MiniscopeDataManager
+from ace_neuro.miniscope.frame_timing import (
+    frame_period_seconds,
+    resolve_miniscope_frame_rate_hz,
+    ttl_gap_threshold_seconds,
+)
 from ace_neuro.shared.path_finder import PathFinder
 from ace_neuro.shared.exceptions import DataImportError
 from typing import List, Optional, Union, Dict, Any, Tuple
@@ -126,6 +131,11 @@ class UCLADataManager(MiniscopeDataManager):
             ephys_dm: EphysDataManager instance to extract TTL sync pulses from.
             channel_name: Optional specific channel name from ephys_dm (defaults to first available).
             
+        Keyword Args:
+            threshold: Gap threshold in seconds (default: ``1.5 / frameRate`` from metadata or ``self.fr``).
+            fix_TTL_gaps: If True, interpolate missing TTL times across detected gaps.
+            delete_TTLs: If True, drop TTL indices listed in analysis params.
+            
         Returns:
             Tuple of synced calcium timestamps and low confidence periods.
         """
@@ -144,7 +154,11 @@ class UCLADataManager(MiniscopeDataManager):
             
         print("Checking for missing TTL pulses in V3 data...")
         low_confidence_periods = np.empty((0, 2))
-        threshold = kwargs.get('threshold', 0.065)
+        frame_rate_hz = resolve_miniscope_frame_rate_hz(
+            self.metadata, getattr(self, "fr", None)
+        )
+        default_threshold = ttl_gap_threshold_seconds(frame_rate_hz)
+        threshold = kwargs.get("threshold", default_threshold)
         fix_TTL_gaps = kwargs.get('fix_TTL_gaps', False)
         delete_TTLs = kwargs.get('delete_TTLs', True)
         
@@ -161,10 +175,7 @@ class UCLADataManager(MiniscopeDataManager):
             flippedidx_TTL_gap = np.flip(idx_TTL_gap)
             for gap_idx in flippedidx_TTL_gap:
                 gap_duration = dtCaIm[gap_idx]
-                if self.metadata is not None and 'frameRate' in self.metadata:
-                    expected_frame_duration = 1.0 / float(self.metadata['frameRate'])
-                else:
-                    expected_frame_duration = 0.0333  # default 30 fps
+                expected_frame_duration = frame_period_seconds(frame_rate_hz)
                 gap_length = int(np.round(gap_duration / expected_frame_duration))
                 print(f"{gap_length - 1} TTL event(s) missing between indices {gap_idx} and {gap_idx + 1}.")
                 

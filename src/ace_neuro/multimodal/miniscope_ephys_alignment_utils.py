@@ -3,6 +3,11 @@ import numpy as np
 from pathlib import Path
 from ace_neuro.ephys.channel import Channel
 from ace_neuro.ephys.ephys_data_manager import EphysDataManager
+from ace_neuro.miniscope.frame_timing import (
+    frame_period_seconds,
+    resolve_miniscope_frame_rate_hz,
+    ttl_gap_threshold_seconds,
+)
 from ace_neuro.shared.path_finder import PathFinder
 from typing import List, Optional, Union, Dict, Any, Tuple, TYPE_CHECKING
 
@@ -16,7 +21,8 @@ def sync_neuralynx_miniscope_timestamps(
     ephys_dm: EphysDataManager, 
     delete_TTLs: bool = True, 
     fix_TTL_gaps: bool = False, 
-    only_experiment_events: bool = True
+    only_experiment_events: bool = True,
+    ttl_gap_threshold: Optional[float] = None,
 ) -> Tuple[np.ndarray, np.ndarray, Channel, 'MiniscopeDataManager']:
     """Synchronize Neuralynx and miniscope timestamps.
     
@@ -30,6 +36,8 @@ def sync_neuralynx_miniscope_timestamps(
         delete_TTLs: If True, remove TTLs for dropped frames from analysis_params.
         fix_TTL_gaps: If True, interpolate missing TTL events.
         only_experiment_events: If True, remove TTL events from event list.
+        ttl_gap_threshold: If set, seconds; inter-TTL dt above this counts as a gap.
+            Otherwise derived as ``1.5 / frameRate`` from miniscope metadata.
         
     Returns:
         Tuple of (tCaIm, low_confidence_periods, channel, miniscope_dm)
@@ -37,11 +45,16 @@ def sync_neuralynx_miniscope_timestamps(
     print('Syncing calcium movie times using Data Manager...')
     
     # Let the data managers handle TTL extraction and alignment natively
+    sync_kwargs: Dict[str, Any] = dict(
+        delete_TTLs=delete_TTLs,
+        fix_TTL_gaps=fix_TTL_gaps,
+    )
+    if ttl_gap_threshold is not None:
+        sync_kwargs["threshold"] = ttl_gap_threshold
     tCaIm, low_confidence_periods = miniscope_dm.sync_timestamps(
         ephys_dm=ephys_dm, 
         channel_name=channel.name,
-        delete_TTLs=delete_TTLs,
-        fix_TTL_gaps=fix_TTL_gaps
+        **sync_kwargs
     )
 
     # Make an array of the Neuralynx events with the TTL events removed
@@ -63,12 +76,12 @@ def _correct_tCaIm(
     tCaIm: np.ndarray, 
     low_confidence_periods: np.ndarray, 
     miniscope_dm: 'MiniscopeDataManager', 
-    threshold: float = 0.065, 
+    threshold: Optional[float] = None, 
     fix_TTL_gaps: bool = False
 ) -> Tuple[np.ndarray, np.ndarray, 'MiniscopeDataManager']:
     """This method first confirms that the TTL events alternate and then checks for missing TTL events. If there are any, the method guesses their timing and inserts them into the calcium imaging time vector.
     event_labels is the array of imported Neuralynx event labels.
-    THRESHOLD is the time threshold, in seconds, for detecting gaps in the TTL events."""
+    threshold is the time threshold, in seconds, for detecting gaps in the TTL events; if None, uses ``1.5 / frameRate`` from miniscope metadata."""
     print('Checking that TTL events alternate...')
     # Print a message if the TTL event labels do not alternate between HIGH and LOW
     alternating = []
@@ -81,6 +94,11 @@ def _correct_tCaIm(
     
     print('Finding any gaps in the TTL events...')
     dtCaIm = np.diff(tCaIm)
+    if threshold is None:
+        fr_hz = resolve_miniscope_frame_rate_hz(
+            miniscope_dm.metadata, getattr(miniscope_dm, "fr", None)
+        )
+        threshold = ttl_gap_threshold_seconds(fr_hz)
     idx_TTL_gap = np.where(dtCaIm > threshold)[0] # indices of gaps in the TTL events
     if len(idx_TTL_gap) == 0:
         print('No gaps were found with a threshold of ' + str(threshold*1000) + ' ms.')
@@ -89,8 +107,10 @@ def _correct_tCaIm(
         flippedidx_TTL_gap = np.flip(idx_TTL_gap) # Reverse the order of idx_TTL_gap so that inserting TTLs in the loop doesn't affect the indices of the next iteration of the loop.
         gap_length = [] # number dropped frames per index
         for k, gap_idx in enumerate(flippedidx_TTL_gap):
-            frame_rate = float(miniscope_dm.metadata.get('frameRate', 30.0)) if miniscope_dm.metadata else 30.0
-            gap_length.append(int(np.round(dtCaIm[gap_idx]/(1/frame_rate)))) # Guesses how many timesteps occur in the gap. E.g., a 30 Hz video with a gap of 67 ms will have 2 timesteps in the gap.
+            frame_rate = resolve_miniscope_frame_rate_hz(
+                miniscope_dm.metadata, getattr(miniscope_dm, "fr", None)
+            )
+            gap_length.append(int(np.round(dtCaIm[gap_idx] / frame_period_seconds(frame_rate))))
             print(str(gap_length[k]-1) + ' TTL event(s) is/are missing between index numbers ' + str(gap_idx) + ' and ' + str(gap_idx + 1) + '.')
             estimated_event_times = np.linspace(tCaIm[gap_idx], tCaIm[gap_idx+1], gap_length[k]+1) # Estimates the timing of the TTLs, beginning at the one before the gap and ending at the one after the gap.
             tCaIm = np.insert(tCaIm, gap_idx+1, estimated_event_times[1:-1])

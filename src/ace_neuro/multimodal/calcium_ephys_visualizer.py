@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import os
+from ace_neuro.miniscope.frame_timing import resolve_miniscope_frame_rate_hz
 from ace_neuro.multimodal.miniscope_ephys_alignment_utils import find_ca_movie_filenums
 import caiman as cm
 from ace_neuro.shared.path_finder import PathFinder
@@ -150,7 +151,9 @@ def create_ca_ephys_movie(
                 ephys_segment = channel_object.signal[ephys_idx_all_TTL_events[frame-num_frames_of_traces]:ephys_idx_all_TTL_events[frame]]
             else:
                 # ephys_segment = self.ephys[channel_object][ephys_idx_all_TTL_events[frame]-num_frames_of_traces*round(self.samplingRate[channel_object]/self.experiment['frameRate']):ephys_idx_all_TTL_events[frame]] # This makes it so it plots the ephys from before the created movie started.
-                frame_rate = float(miniscope_dm.metadata.get('frameRate', 30.0))
+                frame_rate = resolve_miniscope_frame_rate_hz(
+                    miniscope_dm.metadata, getattr(miniscope_dm, "fr", None)
+                )
                 ephys_segment = np.concatenate((np.ones((num_frames_of_traces - frame + movie_frames[0])*round(channel_object.sampling_rate/frame_rate)) * np.nan, channel_object.signal[ephys_idx_all_TTL_events[movie_frames[0]]:ephys_idx_all_TTL_events[frame]]))
 
         # Plot the segment on top of the frame
