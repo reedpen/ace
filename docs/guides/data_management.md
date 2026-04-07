@@ -4,6 +4,8 @@ ACE-neuro uses a declarative, CSV-based approach to managing experimental data. 
 
 This approach ensures that your analysis pipelines can be run in large batches without manual intervention.
 
+**Setup and OS notes:** See [Getting started — platform support and installation](../getting_started.md#2-platform-support-and-what-works-out-of-the-box). Paths in CSVs are resolved the same way on Linux, macOS, and Windows; use a consistent style and prefer relative paths under `data_path` for portability.
+
 ## The Core Files
 
 At the root of your project directory, ACE-neuro expects to find two files:
@@ -73,3 +75,7 @@ If your `calcium imaging directory` is set to `Rat01/2024_01_01/Miniscope`, the 
 ## Adding New Columns
 
 You are free to add as many custom columns to `experiments.csv` as you like (e.g., `behavioral_score`, `genotype`). ACE-neuro will automatically load these into the `ExperimentDataManager.metadata` dictionary, making them accessible to your custom downstream analysis scripts.
+
+## Custom recording formats
+
+If your miniscope or ephys data use a layout or file format that is not covered by the built-in loaders, you can add support by implementing a new data manager subclass. See [Creating new data loaders](adding_data_loaders.md) for the factory pattern, required methods, and how to register your class with the pipelines.

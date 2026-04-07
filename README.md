@@ -73,7 +73,6 @@ classDiagram
     }
 
     ExperimentDataManager <|-- MiniscopeDataManager : Inherits
-    ExperimentDataManager <|-- EphysDataManager : Inherits
     EphysDataManager --> BlockProcessor : Uses
     BlockProcessor ..> Channel : Creates
     EphysDataManager *-- Channel : Contains
@@ -82,8 +81,8 @@ classDiagram
 
 ### Core Data Classes
 *   **`ExperimentDataManager`**: Base class for managing experiment metadata and analysis parameters.
-*   **`MiniscopeDataManager`**: Specialized handler for calcium imaging data, managing video streams, timestamps, and CNMF-E results.
-*   **`EphysDataManager`**: Specialized handler for electrophysiology data, managing raw Block imports and channel signal processing.
+*   **`MiniscopeDataManager`**: Extends `ExperimentDataManager`; handles calcium imaging paths, movies, timestamps, and CNMF-E outputs.
+*   **`EphysDataManager`**: Abstract base for electrophysiology backends (not a subclass of `ExperimentDataManager`); manages raw imports and `Channel` objects. Pipelines combine it with `ExperimentDataManager` for paths/metadata.
 
 ### Processing Classes
 *   **`MiniscopeProcessor`**: Orchestrates the calcium imaging workflow, wrapping `CaImAn` functionality with optimized defaults and parallel processing management.
@@ -91,7 +90,7 @@ classDiagram
 
 ## Installation
 
-1. **Prerequisites**: Python 3.10+, Mamba/Conda.
+1. **Prerequisites**: Python 3.10+ (see `pyproject.toml`), Mamba or Conda. **Linux x86_64** is the primary development and CI platform; macOS and Windows are expected to work via conda-forge but are not covered by every automated test.
 2. **Clone & Install**:
    ```bash
    git clone https://github.com/emelon8/experiment_analysis.git
@@ -100,7 +99,12 @@ classDiagram
    pip install -e . --no-deps
    ```
    Use **`--no-deps`** so pip does not try to install CaImAn from PyPI (the conda env already provides it). For a full install from pip alone, install CaImAn from [conda-forge](https://anaconda.org/conda-forge/caiman) or [source](https://github.com/flatironinstitute/CaImAn), then `pip install -e .`.
+
+   Do **not** use the committed `environment.yml` as a generic installer: it is a fully pinned, machine-specific export (including a `prefix:`). Use **`linux_environment.yml`** for reproducible environments, or export your own after you have a working stack.
+
 3. **Configure Paths**: Use `--project-path` CLI arguments or pass paths to `Pipeline.run()` (see below).
+
+**Extending loaders:** New acquisition layouts are supported by subclassing `MiniscopeDataManager` / `EphysDataManager` and registering imports (see `docs/guides/adding_data_loaders.md` and **Getting started** on Read the Docs).
 
 ### Project Setup
 

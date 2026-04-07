@@ -2,7 +2,7 @@
 
 ACE-neuro is designed to be flexible. Below are common usage patterns and demonstration scripts included in the repository.
 
-**Passing parameters:** pipeline behavior is controlled by **kwargs to `run()`**, optional rows in **`analysis_parameters.csv`**, and (for CLI) built-in defaults merged with that CSV. Read **§3a** in [Getting started](getting_started.md) before copying snippets below.
+**Passing parameters:** pipeline behavior is controlled by **kwargs to `run()`**, optional rows in **`analysis_parameters.csv`**, and (for CLI) built-in defaults merged with that CSV. Read **section 5a** in [Getting started](getting_started.md) before copying snippets below.
 
 ## 1. Explicit Paths API
 **Script**: `examples/explicit_paths_demo.py`
@@ -38,6 +38,9 @@ Since ACE-neuro is driven by an `experiments.csv` file, you can easily wrap it i
 
 ### Cloud Integration
 The pipeline uses `ace_neuro/shared/file_downloader.py` to check for data locally. If missing, and if `box_credentials.py` is configured, it will automatically pull the required binary data from Box.
+
+### Custom acquisition formats
+If your recordings are not recognized by the built-in loaders, add a `MiniscopeDataManager` or `EphysDataManager` subclass and register it (see [Creating new data loaders](guides/adding_data_loaders.md)). The same CSV layout and pipelines apply once the correct loader is selected.
 
 ## 4. Interactive Tutorials
 

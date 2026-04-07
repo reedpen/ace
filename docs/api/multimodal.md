@@ -2,7 +2,7 @@
 
 Alignment and cross-modal analysis between Miniscope calcium imaging and electrophysiology.
 
-**How to pass arguments:** same pattern as other pipelines — use `MultimodalPipeline.run(...)` with keyword arguments; see [Getting started](../getting_started.md) §3a and [Pipelines](pipelines.md).
+**How to pass arguments:** same pattern as other pipelines — use `MultimodalPipeline.run(...)` with keyword arguments; see [Getting started](../getting_started.md) section 5a and [Pipelines](pipelines.md).
 
 ## Multimodal pipeline
 

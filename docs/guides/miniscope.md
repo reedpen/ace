@@ -2,6 +2,8 @@
 
 The miniscope pipeline performs calcium imaging analysis using CaImAn, including preprocessing (cropping, detrending, DF/F), motion correction, CNMF-E source extraction, and postprocessing (component evaluation, event detection, phase analysis).
 
+Raw movies and timestamps are loaded through **`MiniscopeDataManager.create(...)`** (UCLA V3 vs ONIX V4 is chosen automatically from files under **`calcium imaging directory`**). See [Creating new data loaders — built-in](adding_data_loaders.md#built-in-loaders-shipped-with-ace-neuro) for markers and registry order.
+
 ## Quick Start
 
 ### Prerequisites

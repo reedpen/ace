@@ -1,6 +1,6 @@
 # Ephys Pipeline
 
-The ephys pipeline processes Neuralynx electrophysiology recordings, including channel loading, artifact removal, filtering, spectral analysis, and phase computation.
+The ephys pipeline loads electrophysiology data through **`EphysDataManager.create(...)`**, which selects a concrete backend (currently **Neuralynx** or **ONIX RHS2116** based on files in the ephys directory). It then supports artifact removal, filtering, spectral analysis, and phase computation. For supported formats and how to add another, see [Creating new data loaders](adding_data_loaders.md).
 
 ## Quick Start
 
@@ -39,8 +39,8 @@ api.run(
 
 ## Pipeline Steps
 
-1. **Channel Loading**: Reads Neuralynx `.ncs` files and organizes by channel name
-2. **Artifact Removal**: Optional removal of electrical artifacts
+1. **Channel Loading**: Imports a raw block via the selected `EphysDataManager` (Neo/Neuralynx `.nev`/`.ncs`, or RHS2116 `.raw` streams, depending on `can_handle`).
+2. **Artifact Removal**: Optional removal of electrical artifacts (Neuralynx path; behavior may differ by backend).
 3. **Filtering**: Bandpass, lowpass, or highpass filtering with configurable parameters
 4. **Spectrogram**: Multi-taper spectral analysis with sliding windows
 5. **Phase Analysis**: Hilbert transform phase computation for specified frequency bands
@@ -58,4 +58,4 @@ api.run(
 
 ## Data Organization
 
-Raw data paths are specified in `experiments.csv` under the `ephys directory` column. The pipeline reads `.ncs` files from these directories.
+Raw data paths are specified in `experiments.csv` under the **`ephys directory`** column (resolved relative to `data_path`). The files present must match **one** registered `EphysDataManager` subclass — for example Neuralynx `Events.nev` + `.ncs` channels, or ONIX RHS2116 `rhs2116pair-*.raw` together with `start-time_*.csv` as implemented in code.

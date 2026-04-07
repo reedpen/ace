@@ -85,6 +85,7 @@ nav:
       - Ephys Analysis: guides/ephys.md
       - Multimodal Integration: guides/multimodal.md
       - Data Management: guides/data_management.md
+      - Creating Data Loaders: guides/adding_data_loaders.md
   - API Reference:
       - Overview: api/index.md
       - Pipelines: api/pipelines.md

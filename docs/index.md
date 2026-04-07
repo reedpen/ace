@@ -14,7 +14,7 @@ For a **class-diagram overview** of core managers and processors, see the Mermai
 
 -   __Multimodal Alignment__
     
-    Seamlessly align miniscope movies with ephys timestamps using TTL pulses for cross-modal analysis.
+    Align miniscope and ephys time bases (TTL-based or hardware-clock paths, depending on loaders) for cross-modal analysis.
 
 -   __CNMF-E Integrated__
     
@@ -39,14 +39,12 @@ These notebooks explain **`project_path`** (folder with **`experiments.csv`** an
 
 ## Installation
 
-Install ACE-neuro and its core dependencies in your environment:
+The Miniscope pipeline depends on **CaImAn** and a full scientific stack. **Do not** rely on `pip install -e .` alone unless you already have CaImAn working on your machine.
 
-```bash
-# Clone and install in editable mode
-git clone https://github.com/emelon8/experiment_analysis.git
-cd experiment_analysis
-pip install -e "."
-```
+- **Full setup (recommended):** follow **[Getting started — Installation](getting_started.md#3-installation)** (conda + `linux_environment.yml` on Linux; macOS/Windows are best-effort via conda-forge).
+- **Documentation builds only:** Read the Docs installs the package without CaImAn so API pages can build without the imaging stack; that environment is not sufficient to run CNMF-E locally.
+
+For architecture, extension points, and supported acquisition formats, see **[Getting started](getting_started.md)** and **[Creating new data loaders](guides/adding_data_loaders.md)**.
 
 ---
 
@@ -74,7 +72,7 @@ api.run(
 )
 ```
 
-**Parameters:** every pipeline exposes a `run(...)` method whose arguments are **keyword-only in practice** (see docstrings). You set them via **Python kwargs**, optional **`analysis_parameters.csv`** (loaded with `load_analysis_params`), and **CLI defaults** for `python -m ace_neuro.pipelines.*`. The precedence and full pattern are spelled out under **§3a. Passing parameters into the pipelines** in [Getting started](getting_started.md).
+**Parameters:** every pipeline exposes a `run(...)` method whose arguments are **keyword-only in practice** (see docstrings). You set them via **Python kwargs**, optional **`analysis_parameters.csv`** (loaded with `load_analysis_params`), and **CLI defaults** for `python -m ace_neuro.pipelines.*`. The precedence and full pattern are spelled out under **section 5a (Passing parameters into the pipelines)** in [Getting started](getting_started.md).
 
 ---
 
@@ -84,7 +82,7 @@ api.run(
 *   **Ephys**: Neuralynx/ONIX import, artifact removal, bandpass filtering, and spectral analysis.
 *   **Alignment**: TTL-based synchronization of dual-stream datasets.
 *   **Data Management**: CSV-driven experiment cohorts and automated Box cloud storage downloads.
-*   **Modern Infrastructure**: 100% Type-hinted, Google-style docstrings, and automated testing.
+*   **Modern Infrastructure**: Type-hinted Python, Google-style docstrings, and automated testing.
 
 ---
 

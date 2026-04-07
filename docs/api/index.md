@@ -10,6 +10,8 @@ ACE-neuro is organized into several key modules:
 - **[Multimodal](multimodal.md)**: Cross-modal alignment and the multimodal pipeline API.
 - **[Shared](shared.md)**: Core utilities for configuration, paths, and data managers.
 
+New acquisition formats plug in at **`MiniscopeDataManager`** / **`EphysDataManager`** (see [Creating new data loaders](../guides/adding_data_loaders.md) and [Getting started](../getting_started.md#4-how-the-codebase-is-meant-to-extend)).
+
 ## Package Structure
 
 ```text
