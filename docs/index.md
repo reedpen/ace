@@ -86,8 +86,6 @@ api.run(
 
 ---
 
-<p align="center">
-  [Getting Started](getting_started.md){ .md-button .md-button--primary }
-  [Tutorials: Miniscope](notebooks/miniscope_pipeline_tutorial.ipynb){ .md-button }
-  [API Reference](api/index.md){ .md-button }
-</p>
+| | | |
+|:--:|:--:|:--:|
+| [Getting Started](getting_started.md){ .md-button .md-button--primary } | [Tutorials: Miniscope](notebooks/miniscope_pipeline_tutorial.ipynb){ .md-button } | [API Reference](api/index.md){ .md-button } |
